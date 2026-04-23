@@ -1,0 +1,1543 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Math Bingo Caller</title>
+<style>
+/* ── CSS Variables ── */
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface2: #f0f0f0;
+  --border: #ddd;
+  --text: #1a1a1a;
+  --text-muted: #666;
+  --primary: #1565c0;
+  --primary-fg: #fff;
+  --danger: #c62828;
+  --danger-fg: #fff;
+  --col-B: #1565c0;
+  --col-I: #2e7d32;
+  --col-N: #e65100;
+  --col-G: #6a1b9a;
+  --col-O: #b71c1c;
+  --col-B-light: #e3f2fd;
+  --col-I-light: #e8f5e9;
+  --col-N-light: #fff3e0;
+  --col-G-light: #f3e5f5;
+  --col-O-light: #ffebee;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.12);
+  --topbar-h: 52px;
+  --bottomnav-h: 64px;
+  --font-scale: 1;
+}
+[data-theme="dark"] {
+  --bg: #121212;
+  --surface: #1e1e1e;
+  --surface2: #2a2a2a;
+  --border: #444;
+  --text: #f0f0f0;
+  --text-muted: #999;
+  --primary: #5c9ce6;
+  --primary-fg: #000;
+  --col-B-light: #0d2a4a;
+  --col-I-light: #0a2a0f;
+  --col-N-light: #2a1500;
+  --col-G-light: #1e0a2a;
+  --col-O-light: #2a0a0a;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── App shell ── */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── Top bar ── */
+#topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+#topbar .spacer { flex: 1; }
+#topbar .center { flex: 1; text-align: center; font-size: .85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.icon-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: .82rem;
+  cursor: pointer;
+  color: var(--text);
+  white-space: nowrap;
+  transition: background .15s;
+}
+.icon-btn:hover { background: var(--surface2); }
+.topbar-right { display: flex; gap: 6px; }
+
+/* ── Notification banner ── */
+#notification {
+  padding: 8px 16px;
+  font-size: .85rem;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+#notification.success { background: #e8f5e9; color: #1b5e20; border-color: #a5d6a7; }
+#notification.warning { background: #fff8e1; color: #5d4037; border-color: #ffe082; }
+#notification.error   { background: #ffebee; color: #b71c1c; border-color: #ef9a9a; }
+[data-theme="dark"] #notification.success { background: #0a2a0f; color: #a5d6a7; }
+[data-theme="dark"] #notification.warning { background: #2a1c00; color: #ffe082; }
+[data-theme="dark"] #notification.error   { background: #2a0a0a; color: #ef9a9a; }
+#notification .notif-close { margin-left: auto; cursor: pointer; opacity: .6; font-size: 1rem; flex-shrink: 0; line-height: 1; padding: 2px; }
+#notification .notif-close:hover { opacity: 1; }
+
+/* ── Main area ── */
+#main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Called board (bottom strip) ── */
+#board-panel {
+  order: 2;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  max-height: 200px;
+  overflow-y: auto;
+}
+#board-panel.hidden { display: none; }
+.board-header {
+  padding: 5px 12px 3px;
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#board-grid {
+  padding: 5px 0 7px;
+  display: flex;
+  gap: 0;
+  width: 100%;
+}
+.board-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-content: flex-start;
+  justify-content: center;
+  padding: 4px 6px 6px;
+  border-right: 1px solid var(--border);
+}
+.board-col:last-child { border-right: none; }
+.board-col-header {
+  flex: 0 0 100%;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: #fff;
+  margin-bottom: 3px;
+}
+.board-cell {
+  font-size: .92rem;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.board-cell.called {
+  font-weight: 700;
+  color: #fff;
+}
+
+/* ── Problem area ── */
+#problem-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+}
+#start-prompt {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  text-align: center;
+}
+#start-prompt kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: .95em;
+}
+
+/* ── Problem card ── */
+#problem-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 700px;
+  position: relative;
+}
+#replay-badge {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+#col-chip {
+  font-size: 3.5rem;
+  font-weight: 900;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  letter-spacing: -.02em;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+#col-chip[data-col="B"] { background: var(--col-B); }
+#col-chip[data-col="I"] { background: var(--col-I); }
+#col-chip[data-col="N"] { background: var(--col-N); }
+#col-chip[data-col="G"] { background: var(--col-G); }
+#col-chip[data-col="O"] { background: var(--col-O); }
+#col-chip.hidden { display: none; }
+
+#problem-text {
+  font-size: calc(4rem * var(--font-scale));
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+  color: var(--text);
+  word-break: break-word;
+  transition: color .2s, opacity .2s;
+}
+#problem-card.replay #problem-text { opacity: .55; }
+
+#answer-reveal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#answer-value {
+  font-size: calc(4.5rem * var(--font-scale));
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -.02em;
+}
+#answer-value[data-col="B"] { color: var(--col-B); }
+#answer-value[data-col="I"] { color: var(--col-I); }
+#answer-value[data-col="N"] { color: var(--col-N); }
+#answer-value[data-col="G"] { color: var(--col-G); }
+#answer-value[data-col="O"] { color: var(--col-O); }
+
+#game-over-msg {
+  color: var(--text-muted);
+  font-size: 1rem;
+  text-align: center;
+  padding: 10px 20px;
+  background: var(--surface2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* ── Timer ── */
+#timer-container {
+  position: absolute;
+  bottom: 8px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+#timer-track {
+  width: 100%;
+  max-width: 500px;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+#timer-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width .1s linear;
+  width: 100%;
+}
+#timer-label {
+  font-size: .78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Bottom nav ── */
+#bottom-nav {
+  height: var(--bottomnav-h);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+.nav-btn {
+  padding: 10px 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+  transition: background .15s;
+}
+.nav-btn:hover { background: var(--border); }
+.nav-btn.primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+.nav-btn.primary:hover { opacity: .88; }
+.nav-btn:disabled { opacity: .35; cursor: default; }
+
+/* ── Overlays ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  max-width: 540px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-header h2 { font-size: 1.1rem; font-weight: 700; }
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.close-btn:hover { background: var(--surface2); color: var(--text); }
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ── Settings panel ── */
+.settings-section { margin-bottom: 20px; }
+.settings-section:last-child { margin-bottom: 0; }
+.settings-label {
+  display: block;
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.settings-row label { font-size: .9rem; flex: 1; }
+.file-info {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: .83rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.file-info strong { color: var(--text); }
+.seg-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.seg-btn {
+  padding: 5px 12px;
+  font-size: .85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+  transition: all .15s;
+}
+.seg-btn.active {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+select {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .9rem;
+  cursor: pointer;
+}
+input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: .9rem;
+  text-decoration: underline;
+  padding: 0;
+}
+.btn-link:hover { opacity: .75; }
+.btn-danger {
+  background: var(--danger);
+  color: var(--danger-fg);
+  border: none;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-danger:hover { opacity: .85; }
+#file-input { display: none; }
+
+/* ── Help / shortcuts ── */
+.shortcuts-table { width: 100%; border-collapse: collapse; }
+.shortcuts-table tr { border-bottom: 1px solid var(--border); }
+.shortcuts-table tr:last-child { border-bottom: none; }
+.shortcuts-table td { padding: 8px 6px; font-size: .9rem; vertical-align: middle; }
+.shortcuts-table td:first-child { white-space: nowrap; }
+kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: .88em;
+  white-space: nowrap;
+}
+
+/* ── Confirm dialog ── */
+.confirm-panel { max-width: 380px; }
+.confirm-panel p { font-size: .95rem; margin-bottom: 18px; }
+.confirm-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-buttons button { padding: 8px 18px; border-radius: 6px; font-size: .9rem; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); }
+.confirm-buttons button:hover { background: var(--border); }
+
+/* ── Font scale variants ── */
+[data-fontsize="small"]  { --font-scale: 0.65; }
+[data-fontsize="medium"] { --font-scale: 0.85; }
+[data-fontsize="large"]  { --font-scale: 1; }
+[data-fontsize="xlarge"] { --font-scale: 1.35; }
+
+/* ── Utility ── */
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <button class="icon-btn" id="btn-settings">⚙ Settings</button>
+    <div class="spacer"></div>
+    <div class="center" id="progress-display"></div>
+    <div class="spacer"></div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="btn-help">? Help</button>
+    </div>
+  </div>
+
+  <!-- Notification banner -->
+  <div id="notification" hidden></div>
+
+  <!-- Main content -->
+  <div id="main">
+
+    <!-- Called numbers board -->
+    <div id="board-panel">
+      <div class="board-header">Called Numbers</div>
+      <div id="board-grid"></div>
+    </div>
+
+    <!-- Problem display -->
+    <div id="problem-area">
+      <div id="start-prompt">Press <kbd>Space</kbd> or click <strong>Next →</strong> to begin</div>
+
+      <div id="problem-card" hidden>
+        <div id="replay-badge" hidden>↺ REPLAY</div>
+        <div id="col-chip"></div>
+        <div id="problem-text"></div>
+        <div id="answer-reveal" hidden>
+          <div id="answer-value"></div>
+        </div>
+        <div id="game-over-msg" hidden>🎉 All answers called! Press <kbd>R</kbd> to start a new game.</div>
+      </div>
+
+      <div id="timer-container" hidden>
+        <div id="timer-track"><div id="timer-fill"></div></div>
+        <div id="timer-label"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom nav -->
+  <div id="bottom-nav">
+    <button class="nav-btn" id="btn-prev">← Back</button>
+    <button class="nav-btn primary" id="btn-next">Next →</button>
+  </div>
+
+</div>
+
+<!-- Settings overlay -->
+<div class="overlay" id="settings-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2>⚙ Settings</h2>
+      <button class="close-btn" id="btn-close-settings">✕</button>
+    </div>
+    <div class="panel-body" id="settings-body"></div>
+  </div>
+</div>
+
+<!-- Help overlay -->
+<div class="overlay" id="help-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2>? Keyboard Shortcuts</h2>
+      <button class="close-btn" id="btn-close-help">✕</button>
+    </div>
+    <div class="panel-body">
+      <table class="shortcuts-table">
+        <tr><td><kbd>Space</kbd> / <kbd>→</kbd></td><td>Next problem</td></tr>
+        <tr><td><kbd>←</kbd></td><td>Previous problem (re-read)</td></tr>
+        <tr><td><kbd>↑</kbd></td><td>Toggle answer visibility</td></tr>
+        <tr><td><kbd>P</kbd></td><td>Pause / resume auto-advance timer</td></tr>
+        <tr><td><kbd>B</kbd></td><td>Toggle called-numbers board</td></tr>
+        <tr><td><kbd>R</kbd></td><td>Reset game (with confirmation)</td></tr>
+        <tr><td><kbd>S</kbd></td><td>Open / close settings</td></tr>
+        <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close panel / exit fullscreen</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="overlay" id="confirm-overlay" hidden>
+  <div class="panel confirm-panel">
+    <div class="panel-header"><h2>Reset Game?</h2></div>
+    <div class="panel-body">
+      <p>This will clear all called numbers and reshuffle. Are you sure?</p>
+      <div class="confirm-buttons">
+        <button id="confirm-yes" class="btn-danger">Yes, Reset</button>
+        <button id="confirm-no">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".csv">
+
+<script>
+'use strict';
+
+/* ============================================================
+   DEFAULT PROBLEMS (80 integer addition/subtraction problems)
+   Columns: B(-25 to -16), I(-15 to -6), N(-5 to 5), G(6-15), O(16-25)
+   ============================================================ */
+const DEFAULT_CSV = `column,problem,answer
+B,-10 + (-15),-25
+B,-13 - 12,-25
+B,-8 + (-16),-24
+B,-20 - 4,-24
+B,-11 + (-12),-23
+B,-9 + (-13),-22
+B,-14 - 8,-22
+B,-12 + (-9),-21
+B,-18 - 3,-21
+B,-8 + (-12),-20
+B,-15 - 5,-20
+B,-10 + (-9),-19
+B,-9 + (-9),-18
+B,-11 - 7,-18
+B,-5 + (-12),-17
+B,-7 + (-9),-16
+I,-8 + (-7),-15
+I,-11 - 4,-15
+I,-9 + (-5),-14
+I,-6 - 8,-14
+I,-7 + (-6),-13
+I,-10 - 3,-13
+I,-5 + (-7),-12
+I,-8 - 4,-12
+I,-6 + (-5),-11
+I,-4 + (-6),-10
+I,-5 + (-4),-9
+I,-3 + (-6),-9
+I,-2 + (-6),-8
+I,-3 + (-4),-7
+I,-1 + (-5),-6
+I,0 + (-6),-6
+N,-3 + (-2),-5
+N,-8 + 3,-5
+N,-6 + 2,-4
+N,-1 + (-3),-4
+N,-7 + 4,-3
+N,-5 + 2,-3
+N,-6 + 4,-2
+N,3 + (-5),-2
+N,-4 + 3,-1
+N,2 + (-3),-1
+N,-5 + 5,0
+N,-3 + 4,1
+N,-3 + 5,2
+N,-4 + 7,3
+N,-5 + 9,4
+N,-4 + 9,5
+G,10 + (-4),6
+G,3 + 3,6
+G,10 + (-3),7
+G,4 + 3,7
+G,10 + (-2),8
+G,5 + 3,8
+G,10 + (-1),9
+G,4 + 5,9
+G,15 + (-5),10
+G,4 + 7,11
+G,15 + (-3),12
+G,8 + 4,12
+G,15 + (-2),13
+G,8 + 6,14
+G,8 + 7,15
+G,9 + 6,15
+O,20 + (-4),16
+O,8 + 8,16
+O,20 + (-3),17
+O,9 + 8,17
+O,20 + (-2),18
+O,9 + 9,18
+O,20 + (-1),19
+O,25 + (-5),20
+O,12 + 8,20
+O,25 + (-4),21
+O,25 + (-3),22
+O,15 + 7,22
+O,25 + (-2),23
+O,25 + (-1),24
+O,15 + 10,25
+O,20 + 5,25`;
+
+/* ============================================================
+   CSV PARSER (handles quoted fields, CRLF/LF, whitespace)
+   ============================================================ */
+function parseCSVText(text) {
+  const rows = [];
+  const raw = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  let i = 0;
+  while (i <= raw.length) {
+    const row = [];
+    while (true) {
+      let field = '';
+      if (i < raw.length && raw[i] === '"') {
+        i++; // skip opening quote
+        while (i < raw.length) {
+          if (raw[i] === '"' && raw[i+1] === '"') { field += '"'; i += 2; }
+          else if (raw[i] === '"') { i++; break; }
+          else { field += raw[i++]; }
+        }
+        // skip to comma or newline
+        while (i < raw.length && raw[i] !== ',' && raw[i] !== '\n') i++;
+      } else {
+        while (i < raw.length && raw[i] !== ',' && raw[i] !== '\n') {
+          field += raw[i++];
+        }
+      }
+      row.push(field.trim());
+      if (i >= raw.length || raw[i] === '\n') { i++; break; }
+      i++; // skip comma
+    }
+    if (row.length === 1 && row[0] === '') {
+      if (i > raw.length) break;
+      continue;
+    }
+    rows.push(row);
+    if (i > raw.length) break;
+  }
+  return rows;
+}
+
+/* ============================================================
+   PROBLEM LOADER & VALIDATOR
+   ============================================================ */
+const VALID_COLS = new Set(['B','I','N','G','O']);
+
+function loadProblems(csvText, filename) {
+  const rows = parseCSVText(csvText);
+  const warnings = [];
+  const errors = [];
+  const problems = [];
+
+  if (rows.length < 2) {
+    errors.push('File appears empty or has no data rows.');
+    return { problems, warnings, errors, filename };
+  }
+
+  // Identify header
+  const header = rows[0].map(h => h.toLowerCase().trim());
+  const colIdx     = header.indexOf('column');
+  const probIdx    = header.indexOf('problem');
+  const answerIdx  = header.indexOf('answer');
+
+  if (colIdx < 0 || probIdx < 0 || answerIdx < 0) {
+    errors.push('Missing required columns. Expected headers: column, problem, answer');
+    return { problems, warnings, errors, filename };
+  }
+
+  let skippedInvalidCol = 0;
+  let skippedNonNumeric = 0;
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (row.length <= Math.max(colIdx, probIdx, answerIdx)) continue;
+
+    const col    = row[colIdx].trim().toUpperCase();
+    const prob   = row[probIdx].trim();
+    const ansRaw = row[answerIdx].trim();
+
+    if (!VALID_COLS.has(col)) { skippedInvalidCol++; continue; }
+    if (prob === '') continue;
+
+    const answer = parseFloat(ansRaw);
+    if (isNaN(answer)) { skippedNonNumeric++; continue; }
+
+    problems.push({ column: col, problem: prob, answer });
+  }
+
+  if (skippedInvalidCol > 0)
+    warnings.push(`⚠ ${skippedInvalidCol} row(s) skipped: invalid column letter (must be B, I, N, G, or O)`);
+  if (skippedNonNumeric > 0)
+    warnings.push(`⚠ ${skippedNonNumeric} row(s) skipped: non-numeric answer`);
+
+  if (problems.length === 0) {
+    errors.push('No valid problems found in file.');
+    return { problems, warnings, errors, filename };
+  }
+
+  // Per-column validation
+  const colGroups = {};
+  for (const p of problems) {
+    if (!colGroups[p.column]) colGroups[p.column] = new Set();
+    colGroups[p.column].add(p.answer);
+  }
+  for (const col of VALID_COLS) {
+    if (colGroups[col] && colGroups[col].size < 8) {
+      warnings.push(`⚠ Column ${col} has only ${colGroups[col].size} distinct answer value(s) (8 minimum recommended for bingo cards)`);
+    }
+  }
+
+  // Check overlapping ranges between columns
+  const colRanges = {};
+  for (const [col, vals] of Object.entries(colGroups)) {
+    colRanges[col] = { min: Math.min(...vals), max: Math.max(...vals) };
+  }
+  const colOrder = ['B','I','N','G','O'].filter(c => colRanges[c]);
+  for (let a = 0; a < colOrder.length; a++) {
+    for (let b = a+1; b < colOrder.length; b++) {
+      const ca = colRanges[colOrder[a]], cb = colRanges[colOrder[b]];
+      if (ca.min <= cb.max && cb.min <= ca.max) {
+        warnings.push(`⚠ Answer ranges overlap between columns ${colOrder[a]} and ${colOrder[b]}`);
+      }
+    }
+  }
+
+  const total = problems.length;
+  const perCol = Object.entries(colGroups).map(([c, s]) => `${c}: ${s.size}`).join(', ');
+  warnings.push(`✓ Loaded ${total} problem(s) | Distinct answers — ${perCol}`);
+
+  return { problems, warnings, errors, filename };
+}
+
+/* ============================================================
+   SETTINGS (localStorage)
+   ============================================================ */
+const SETTINGS_KEY = 'mathBingoSettings_v1';
+const DEFAULT_SETTINGS = {
+  theme: 'light',
+  fontSize: 'large',
+  showBoard: true,
+  boardContent: 'problems',   // 'problems' | 'answers'
+  boardShowUncalled: false,
+  showColumn: true,
+  showNavButtons: true,
+  autoAdvanceOn: false,
+  autoAdvanceInterval: 20,
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw));
+  } catch(e) {}
+  return Object.assign({}, DEFAULT_SETTINGS);
+}
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch(e) {}
+}
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+const state = {
+  problems: [],
+  queue: [],
+  history: [],
+  currentIndex: -1,
+  calledAnswers: {},   // { B: Set<number>, I: Set<number>, ... }
+  columnAnswers: {},   // { B: number[], ... } — sorted distinct answers per column
+  filename: 'default-problems.csv',
+  gameOver: false,
+  settings: loadSettings(),
+};
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildColumnAnswers(problems) {
+  const map = {};
+  for (const p of problems) {
+    if (!map[p.column]) map[p.column] = new Set();
+    map[p.column].add(p.answer);
+  }
+  const result = {};
+  for (const [col, vals] of Object.entries(map)) {
+    result[col] = [...vals].sort((a,b) => a - b);
+  }
+  return result;
+}
+
+function initGame() {
+  state.queue = shuffle(state.problems);
+  state.history = [];
+  state.currentIndex = -1;
+  state.calledAnswers = { B: new Set(), I: new Set(), N: new Set(), G: new Set(), O: new Set() };
+  state.gameOver = false;
+}
+
+function currentProblem() {
+  return state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
+}
+
+function isReplay() {
+  return state.currentIndex >= 0 && state.currentIndex < state.history.length - 1;
+}
+
+function canGoNext() {
+  // can advance through history or draw new
+  if (state.currentIndex < state.history.length - 1) return true;
+  return !state.gameOver && state.queue.length > 0;
+}
+
+function nextProblem() {
+  // if we're in the middle of history, just move forward
+  if (state.currentIndex < state.history.length - 1) {
+    state.currentIndex++;
+    state.answerVisible = false;
+    return true;
+  }
+  if (state.gameOver) return false;
+
+  // draw from queue, skipping already-called answers
+  while (state.queue.length > 0) {
+    const p = state.queue.shift();
+    const called = state.calledAnswers[p.column] || new Set();
+    if (called.has(p.answer)) continue;
+
+    // valid new problem
+    if (!state.calledAnswers[p.column]) state.calledAnswers[p.column] = new Set();
+    state.calledAnswers[p.column].add(p.answer);
+    state.history.push(p);
+    state.currentIndex = state.history.length - 1;
+    state.answerVisible = false;
+    return true;
+  }
+
+  state.gameOver = true;
+  return false;
+}
+
+function prevProblem() {
+  if (state.currentIndex <= 0) return false;
+  state.currentIndex--;
+  state.answerVisible = false;
+  return true;
+}
+
+function toggleAnswer() {
+  state.answerVisible = !state.answerVisible;
+}
+
+function resetGame() {
+  stopTimer();
+  initGame();
+}
+
+/* ============================================================
+   AUTO-ADVANCE TIMER
+   ============================================================ */
+let rafId = null;
+let timerEnd = null;
+let timerPaused = false;
+let timerRemainingMs = null;
+const timerIntervalMs = () => state.settings.autoAdvanceInterval * 1000;
+
+function startTimer() {
+  stopTimer();
+  if (!state.settings.autoAdvanceOn || state.gameOver) return;
+  timerEnd = Date.now() + timerIntervalMs();
+  timerPaused = false;
+  timerRemainingMs = null;
+  tickTimer();
+}
+
+function pauseTimer() {
+  if (!timerEnd && !timerPaused) return;
+  if (timerPaused) {
+    // resume
+    timerEnd = Date.now() + timerRemainingMs;
+    timerPaused = false;
+    timerRemainingMs = null;
+    tickTimer();
+  } else {
+    // pause
+    timerRemainingMs = Math.max(0, timerEnd - Date.now());
+    timerPaused = true;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+  updateTimerDisplay();
+}
+
+function stopTimer() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  timerEnd = null;
+  timerPaused = false;
+  timerRemainingMs = null;
+}
+
+function tickTimer() {
+  if (timerPaused) return;
+  const remaining = timerEnd - Date.now();
+  if (remaining <= 0) {
+    stopTimer();
+    nextProblem();
+    render();
+    if (state.settings.autoAdvanceOn && !state.gameOver) startTimer();
+    return;
+  }
+  updateTimerDisplay(remaining);
+  rafId = requestAnimationFrame(tickTimer);
+}
+
+function updateTimerDisplay(remaining) {
+  const container = document.getElementById('timer-container');
+  if (!state.settings.autoAdvanceOn || !timerEnd && !timerPaused) {
+    container.hidden = true;
+    return;
+  }
+  container.hidden = false;
+  const total = timerIntervalMs();
+  const rem = remaining !== undefined ? remaining : (timerPaused ? timerRemainingMs : Math.max(0, timerEnd - Date.now()));
+  const pct = Math.max(0, Math.min(100, (rem / total) * 100));
+  document.getElementById('timer-fill').style.width = pct + '%';
+  const secs = Math.ceil(rem / 1000);
+  const label = timerPaused ? `${secs}s (paused)` : `${secs}s`;
+  document.getElementById('timer-label').textContent = label;
+}
+
+/* ============================================================
+   FORMAT HELPERS
+   ============================================================ */
+const COL_COLORS = { B: '#1565c0', I: '#2e7d32', N: '#e65100', G: '#6a1b9a', O: '#b71c1c' };
+
+function formatAnswer(answer) {
+  // Format as integer if whole, otherwise as decimal
+  return Number.isInteger(answer) ? String(answer) : String(answer);
+}
+
+function formatCallLine(col, answer) {
+  const a = formatAnswer(answer);
+  return `${col}  —  ${a}`;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render() {
+  applySettings();
+  renderProgress();
+  renderBoard();
+  renderProblem();
+  updateTimerDisplay();
+}
+
+function applySettings() {
+  const s = state.settings;
+  document.documentElement.setAttribute('data-theme', s.theme);
+  document.documentElement.setAttribute('data-fontsize', s.fontSize);
+  document.getElementById('board-panel').classList.toggle('hidden', !s.showBoard);
+  document.getElementById('bottom-nav').hidden = !s.showNavButtons;
+}
+
+function renderProgress() {
+  const el = document.getElementById('progress-display');
+  const p = currentProblem();
+  if (!p) { el.textContent = `${state.problems.length} problems loaded`; return; }
+
+  const calledCount = Object.values(state.calledAnswers).reduce((s, set) => s + set.size, 0);
+  const totalAnswers = Object.values(state.columnAnswers).reduce((s, arr) => s + arr.length, 0);
+  const remaining = totalAnswers - calledCount;
+  el.textContent = `Call ${calledCount} of ${totalAnswers} answers • ${remaining} remaining`;
+}
+
+function renderBoard() {
+  const grid = document.getElementById('board-grid');
+  const cols = ['B','I','N','G','O'].filter(c => state.columnAnswers[c]);
+  if (cols.length === 0) { grid.innerHTML = ''; return; }
+
+  const showUncalled = state.settings.boardShowUncalled;
+  const showProblems = state.settings.boardContent === 'problems';
+
+  // Build a map from (col, answer) → problem text for the called entries
+  // Use the history to get the problem text for each called answer
+  const calledProblemMap = {};
+  for (const p of state.history) {
+    const key = `${p.column}:${p.answer}`;
+    if (!calledProblemMap[key]) calledProblemMap[key] = p.problem;
+  }
+
+  grid.innerHTML = cols.map(col => {
+    const answers = state.columnAnswers[col];
+    const called = state.calledAnswers[col] || new Set();
+    const color = COL_COLORS[col];
+
+    const cells = answers.map(a => {
+      const isCalled = called.has(a);
+      if (!isCalled && !showUncalled) return '';
+      const key = `${col}:${a}`;
+      const label = showProblems && isCalled ? (calledProblemMap[key] || String(a)) : String(a);
+      return `<div class="board-cell${isCalled ? ' called' : ''}"
+        style="${isCalled ? `background:${color}` : ''}"
+        title="${col} ${a}">${escHtml(label)}</div>`;
+    }).join('');
+
+    // Don't render the column at all if it has no visible cells
+    const hasVisible = showUncalled || called.size > 0;
+    if (!hasVisible) return '';
+
+    return `<div class="board-col">
+      <div class="board-col-header" style="background:${color}">${col}</div>
+      ${cells}
+    </div>`;
+  }).join('');
+}
+
+function renderProblem() {
+  const p = currentProblem();
+  const startPrompt = document.getElementById('start-prompt');
+  const card = document.getElementById('problem-card');
+
+  if (!p) {
+    startPrompt.hidden = false;
+    card.hidden = true;
+    document.getElementById('btn-prev').disabled = true;
+    document.getElementById('btn-next').disabled = false;
+    return;
+  }
+
+  startPrompt.hidden = true;
+  card.hidden = false;
+  card.classList.toggle('replay', isReplay());
+
+  // Replay badge
+  document.getElementById('replay-badge').hidden = !isReplay();
+
+  // Column chip
+  const chip = document.getElementById('col-chip');
+  chip.hidden = !state.settings.showColumn;
+  if (state.settings.showColumn) {
+    chip.textContent = p.column;
+    chip.setAttribute('data-col', p.column);
+  }
+
+  // Problem text
+  document.getElementById('problem-text').textContent = p.problem;
+
+  // Answer section
+  const answerReveal = document.getElementById('answer-reveal');
+  answerReveal.hidden = !state.answerVisible;
+  if (state.answerVisible) {
+    const valEl = document.getElementById('answer-value');
+    valEl.textContent = formatAnswer(p.answer);
+    valEl.setAttribute('data-col', p.column);
+  }
+
+  // Game over message
+  document.getElementById('game-over-msg').hidden = !state.gameOver;
+
+  // Nav buttons
+  document.getElementById('btn-prev').disabled = state.currentIndex <= 0;
+  document.getElementById('btn-next').disabled = !canGoNext();
+}
+
+/* ============================================================
+   SETTINGS PANEL RENDER
+   ============================================================ */
+function renderSettings() {
+  const s = state.settings;
+  const ca = state.columnAnswers;
+  const colCounts = ['B','I','N','G','O']
+    .filter(c => ca[c])
+    .map(c => `${c}: ${ca[c].length}`)
+    .join(' · ');
+  const totalProblems = state.problems.length;
+
+  document.getElementById('settings-body').innerHTML = `
+    <div class="settings-section">
+      <span class="settings-label">Problem File</span>
+      <div class="file-info">
+        <strong>${escHtml(state.filename)}</strong><br>
+        ${totalProblems} problems · ${colCounts || 'none loaded'}
+      </div>
+      <button class="btn-link" id="settings-load-file">📂 Load a different CSV file…</button>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Auto-Advance Timer</span>
+      <div class="settings-row">
+        <label for="s-auto-on">Enable auto-advance</label>
+        <input type="checkbox" id="s-auto-on" ${s.autoAdvanceOn ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-auto-interval">Interval</label>
+        <select id="s-auto-interval">
+          ${[10,20,30,45,60].map(v => `<option value="${v}" ${s.autoAdvanceInterval===v?'selected':''}>${v} seconds</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Display</span>
+      <div class="settings-row">
+        <label for="s-show-col">Show column letter (B/I/N/G/O)</label>
+        <input type="checkbox" id="s-show-col" ${s.showColumn ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-show-nav">Show Next / Back buttons</label>
+        <input type="checkbox" id="s-show-nav" ${s.showNavButtons ? 'checked' : ''}>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Called Numbers Board <kbd>B</kbd></span>
+      <div class="settings-row">
+        <label for="s-show-board">Show board</label>
+        <input type="checkbox" id="s-show-board" ${s.showBoard ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-board-uncalled">Show uncalled entries</label>
+        <input type="checkbox" id="s-board-uncalled" ${s.boardShowUncalled ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label>Board shows</label>
+        <div class="seg-group">
+          <button class="seg-btn${s.boardContent==='problems'?' active':''}" data-board-content="problems">Problems</button>
+          <button class="seg-btn${s.boardContent==='answers'?' active':''}" data-board-content="answers">Answers</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Font Size</span>
+      <div class="seg-group">
+        ${['small','medium','large','xlarge'].map(sz =>
+          `<button class="seg-btn${s.fontSize===sz?' active':''}" data-fontsize="${sz}">${sz.charAt(0).toUpperCase()+sz.slice(1)}</button>`
+        ).join('')}
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Theme</span>
+      <div class="seg-group">
+        <button class="seg-btn${s.theme==='light'?' active':''}" data-theme-val="light">Light</button>
+        <button class="seg-btn${s.theme==='dark'?' active':''}" data-theme-val="dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Game</span>
+      <button class="btn-danger" id="settings-reset">Reset Game</button>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Help</span>
+      <button class="btn-link" id="settings-help-link">⌨ View keyboard shortcuts</button>
+    </div>
+  `;
+
+  // Wire settings panel events
+  document.getElementById('settings-load-file').onclick = () => document.getElementById('file-input').click();
+  document.getElementById('s-auto-on').onchange = e => {
+    state.settings.autoAdvanceOn = e.target.checked;
+    saveSettings();
+    if (!e.target.checked) stopTimer();
+    else if (currentProblem()) startTimer();
+    render();
+  };
+  document.getElementById('s-auto-interval').onchange = e => {
+    state.settings.autoAdvanceInterval = parseInt(e.target.value);
+    saveSettings();
+    if (state.settings.autoAdvanceOn && currentProblem()) { stopTimer(); startTimer(); }
+    render();
+  };
+  document.getElementById('s-show-col').onchange = e => {
+    state.settings.showColumn = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-show-nav').onchange = e => {
+    state.settings.showNavButtons = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-show-board').onchange = e => {
+    state.settings.showBoard = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-board-uncalled').onchange = e => {
+    state.settings.boardShowUncalled = e.target.checked;
+    saveSettings(); render();
+  };
+  const sBody = document.getElementById('settings-body');
+  sBody.querySelectorAll('[data-board-content]').forEach(btn => {
+    btn.onclick = () => {
+      state.settings.boardContent = btn.dataset.boardContent;
+      saveSettings(); renderSettings(); render();
+    };
+  });
+  sBody.querySelectorAll('[data-fontsize]').forEach(btn => {
+    btn.onclick = () => {
+      state.settings.fontSize = btn.dataset.fontsize;
+      saveSettings(); renderSettings(); render();
+    };
+  });
+  sBody.querySelectorAll('[data-theme-val]').forEach(btn => {
+    btn.onclick = () => {
+      state.settings.theme = btn.dataset.themeVal;
+      saveSettings(); renderSettings(); render();
+    };
+  });
+  document.getElementById('settings-reset').onclick = () => {
+    closeOverlay('settings-overlay');
+    showConfirm();
+  };
+  document.getElementById('settings-help-link').onclick = () => {
+    closeOverlay('settings-overlay');
+    openOverlay('help-overlay');
+  };
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ============================================================
+   OVERLAYS
+   ============================================================ */
+function openOverlay(id) {
+  document.getElementById(id).hidden = false;
+}
+function closeOverlay(id) {
+  document.getElementById(id).hidden = true;
+}
+function closeAllOverlays() {
+  ['settings-overlay','help-overlay','confirm-overlay'].forEach(closeOverlay);
+}
+function anyOverlayOpen() {
+  return ['settings-overlay','help-overlay','confirm-overlay'].some(id => !document.getElementById(id).hidden);
+}
+
+function showConfirm() { openOverlay('confirm-overlay'); }
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+function showNotification(lines, type) {
+  // type: 'success' | 'warning' | 'error'
+  const el = document.getElementById('notification');
+  el.className = type || '';
+  el.innerHTML = `<div style="flex:1">${lines.map(l => `<div>${escHtml(l)}</div>`).join('')}</div>
+    <span class="notif-close" id="notif-close-btn" title="Dismiss">✕</span>`;
+  el.hidden = false;
+  document.getElementById('notif-close-btn').onclick = () => { el.hidden = true; };
+}
+
+/* ============================================================
+   FILE LOADING
+   ============================================================ */
+function handleFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const { problems, warnings, errors, filename } = loadProblems(e.target.result, file.name);
+    if (errors.length > 0) {
+      showNotification(errors, 'error');
+      return;
+    }
+    state.problems = problems;
+    state.filename = filename;
+    state.columnAnswers = buildColumnAnswers(problems);
+    resetGame();
+    const hasWarning = warnings.some(w => w.startsWith('⚠'));
+    showNotification(warnings, hasWarning ? 'warning' : 'success');
+    renderSettings(); // refresh file info in settings panel if open
+    render();
+    // set beforeunload guard
+    updateBeforeUnload();
+  };
+  reader.readAsText(file);
+}
+
+/* ============================================================
+   BEFOREUNLOAD GUARD
+   ============================================================ */
+function updateBeforeUnload() {
+  if (state.history.length > 0) {
+    window.onbeforeunload = () => 'A game is in progress — are you sure you want to leave?';
+  } else {
+    window.onbeforeunload = null;
+  }
+}
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  // Don't intercept when typing in inputs/selects
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+  if (anyOverlayOpen()) {
+    if (e.key === 'Escape') { closeAllOverlays(); e.preventDefault(); }
+    return;
+  }
+
+  switch (e.key) {
+    case ' ':
+    case 'ArrowRight':
+      e.preventDefault();
+      nextProblem(); render();
+      if (state.settings.autoAdvanceOn && !isReplay()) startTimer();
+      else stopTimer();
+      updateBeforeUnload();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      prevProblem(); stopTimer(); render();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      if (currentProblem()) { toggleAnswer(); render(); }
+      break;
+    case 'p': case 'P':
+      e.preventDefault();
+      pauseTimer(); render();
+      break;
+    case 'r': case 'R':
+      e.preventDefault();
+      showConfirm();
+      break;
+    case 's': case 'S':
+      e.preventDefault();
+      renderSettings();
+      openOverlay('settings-overlay');
+      break;
+    case 'b': case 'B':
+      e.preventDefault();
+      state.settings.showBoard = !state.settings.showBoard;
+      saveSettings(); render();
+      break;
+    case 'f': case 'F':
+      e.preventDefault();
+      toggleFullscreen();
+      break;
+    case 'Escape':
+      // handled above
+      break;
+  }
+});
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+function wireEvents() {
+  document.getElementById('btn-next').onclick = () => {
+    nextProblem(); render();
+    if (state.settings.autoAdvanceOn && !isReplay()) startTimer();
+    else stopTimer();
+    updateBeforeUnload();
+  };
+  document.getElementById('btn-prev').onclick = () => {
+    prevProblem(); stopTimer(); render();
+  };
+  document.getElementById('btn-settings').onclick = () => {
+    renderSettings(); openOverlay('settings-overlay');
+  };
+  document.getElementById('btn-close-settings').onclick = () => closeOverlay('settings-overlay');
+  document.getElementById('btn-help').onclick = () => openOverlay('help-overlay');
+  document.getElementById('btn-close-help').onclick = () => closeOverlay('help-overlay');
+  document.getElementById('confirm-yes').onclick = () => {
+    closeOverlay('confirm-overlay');
+    resetGame(); render(); updateBeforeUnload();
+  };
+  document.getElementById('confirm-no').onclick = () => closeOverlay('confirm-overlay');
+
+  // Click outside panel to close overlay
+  document.querySelectorAll('.overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeOverlay(overlay.id);
+    });
+  });
+
+  document.getElementById('file-input').onchange = e => {
+    handleFile(e.target.files[0]);
+    e.target.value = ''; // reset so same file can be re-loaded
+  };
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  wireEvents();
+
+  // Load default problems
+  const { problems, warnings, filename } = loadProblems(DEFAULT_CSV, 'default-problems.csv');
+  state.problems = problems;
+  state.filename = filename;
+  state.columnAnswers = buildColumnAnswers(problems);
+  initGame();
+  render();
+}
+
+init();
+</script>
+</body>
+</html>
