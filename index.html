@@ -2,7 +2,7 @@
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Math Bingo Caller</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
@@ -64,7 +64,7 @@ body {
 }
 
 /* ── App shell ── */
-#app { display: flex; flex-direction: column; height: 100vh; }
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
 
 /* ── Top bar ── */
 #topbar {
@@ -407,12 +407,13 @@ body {
 
 /* ── Bottom nav ── */
 #bottom-nav {
-  height: var(--bottomnav-h);
+  min-height: var(--bottomnav-h);
   background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
+  padding-bottom: env(safe-area-inset-bottom);
   flex-shrink: 0;
   gap: 12px;
 }
@@ -600,6 +601,7 @@ kbd {
 /* ── Homepage ── */
 #homepage-view {
   height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   background: var(--bg);
 }
@@ -749,7 +751,7 @@ kbd {
 
 /* ── Print view shell ── */
 #print-view {
-  display: flex; flex-direction: column; height: 100vh;
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh;
   background: var(--bg); overflow: hidden;
 }
 #pv-topbar {
@@ -929,6 +931,13 @@ kbd {
             <div class="pv-style-thumb pv-thumb-work"></div>
             <div><span>Work Area</span><small>2 per page · work space</small></div>
           </label>
+        </div>
+      </div>
+      <div class="pv-opt-group">
+        <label class="pv-opt-label">Card label</label>
+        <div class="settings-row">
+          <label for="pv-show-numbers" style="font-size:.9rem;cursor:pointer">Show card number at bottom</label>
+          <input type="checkbox" id="pv-show-numbers" checked>
         </div>
       </div>
       <button class="hp-btn primary" id="pv-download-btn">⬇ Download Cards</button>
@@ -2175,92 +2184,168 @@ function generateBingoCards(n) {
   );
 }
 
-function renderCardsHTML(cards, setName, opts = {}) {
-  const { style = 'full', color = true } = opts;
-  const cols = ['B','I','N','G','O'];
-
-  const makeCard = (card, i) => {
-    const rows = [0,1,2,3,4].map(row => {
-      const cells = cols.map((col, ci) => {
-        const val = card[ci][row];
-        if (val === null) return `<td class="free">FREE</td>`;
-        return `<td>${escHtml(String(val))}</td>`;
-      }).join('');
-      return `<tr>${cells}</tr>`;
-    }).join('');
-    const headers = cols.map(c => {
-      const bg = color ? COL_COLORS[c] : '#333';
-      return `<th style="background:${bg}">${c}</th>`;
-    }).join('');
-    const workSection = style === 'work' ? `<div class="work-area"></div>` : '';
-    return `<div class="card-wrap">
-      <div class="card-label">Card ${i + 1} &mdash; ${escHtml(setName)}</div>
-      <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
-      ${workSection}
-    </div>`;
-  };
-
-  let cardPages = '';
-  if (style === 'full') {
-    cardPages = cards.map((card, i) =>
-      `<div class="card-page">${makeCard(card, i)}</div>`
-    ).join('');
-  } else {
-    for (let i = 0; i < cards.length; i += 2) {
-      const a = makeCard(cards[i], i);
-      const b = i + 1 < cards.length ? makeCard(cards[i + 1], i + 1) : '<div class="card-wrap"></div>';
-      cardPages += `<div class="card-page">${a}${b}</div>`;
-    }
-  }
-
-  const freeColor = color ? '#f0e6ff' : '#eee';
-  const pageCSS = style === 'full'
-    ? `@page { size: letter portrait; margin: 10mm; } .card-page { page-break-after: always; }`
-    : `@page { size: letter landscape; margin: 8mm; } .card-page { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; page-break-after: always; }`;
-  const workCSS = style === 'work'
-    ? `.work-area { margin-top: 6mm; border-top: 1px solid #ccc; height: 35mm; background-image: repeating-linear-gradient(transparent, transparent 7mm, #ddd 7mm, #ddd calc(7mm + 0.5px)); }`
-    : '';
-
-  return `<!DOCTYPE html><html lang="en"><head>
-    <meta charset="utf-8">
-    <title>Bingo Cards \u2014 ${escHtml(setName)}</title>
-    <style>
-      *, *::before, *::after { box-sizing: border-box; }
-      body { font-family: sans-serif; margin: 0; padding: 0; background: #fff; }
-      .card-page { padding: 0; }
-      .card-wrap { overflow: hidden; }
-      .card-label { font-size: .7rem; color: #666; margin-bottom: 3mm; }
-      table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-      th { color: #fff; font-size: 1.2em; padding: 5px 2px; text-align: center; }
-      td { border: 1.5px solid #999; text-align: center; padding: 6px 2px; font-size: .95em; font-weight: 600; }
-      .free { background: ${freeColor}; font-weight: 800; color: #555; font-size: .85em; }
-      ${pageCSS}
-      ${workCSS}
-    <\/style>
-  <\/head><body>${cardPages}<\/body><\/html>`;
-}
-
 function pvDownloadCards() {
-  const n     = parseInt(document.getElementById('pv-count').value, 10);
-  const style = document.querySelector('.pv-style-card.active')?.dataset.pvStyle || 'full';
-  const color = document.querySelector('[data-pv-color].active')?.dataset.pvColor !== 'bw';
-  const errEl = document.getElementById('pv-dl-error');
-  errEl.hidden = true;
+  const n        = parseInt(document.getElementById('pv-count').value, 10);
+  const style    = document.querySelector('.pv-style-card.active')?.dataset.pvStyle || 'full';
+  const color    = document.querySelector('[data-pv-color].active')?.dataset.pvColor !== 'bw';
+  const showNums = document.getElementById('pv-show-numbers')?.checked ?? true;
+  const errEl    = document.getElementById('pv-dl-error');
+  errEl.hidden   = true;
 
   if (isNaN(n) || n < 1) {
-    errEl.textContent = 'Enter a valid card count (1–200).'; errEl.hidden = false; return;
+    errEl.textContent = 'Enter a valid card count (1\u2013200).'; errEl.hidden = false; return;
   }
   const thinCols = ['B','I','N','G','O'].filter(c => (state.columnAnswers[c] || []).length < 5);
   if (thinCols.length) {
     errEl.textContent = `Not enough answers in columns: ${thinCols.join(', ')} (need \u2265 5 each).`;
     errEl.hidden = false; return;
   }
+  if (typeof jspdf === 'undefined') {
+    errEl.textContent = 'PDF library not loaded yet \u2014 please try again in a moment.';
+    errEl.hidden = false; return;
+  }
+
   const cards = generateBingoCards(n);
-  const html  = renderCardsHTML(cards, state.setName || 'Bingo', { style, color });
-  const w = window.open('', '_blank');
-  if (!w) { errEl.textContent = 'Pop-up blocked \u2014 allow pop-ups for this page.'; errEl.hidden = false; return; }
-  w.document.write(html);
-  w.document.close();
+  generateCardsPDF(cards, { style, color, showCardNumbers: showNums });
+}
+
+const COL_RGB = {
+  B: [ 21, 101, 192],
+  I: [ 46, 125,  50],
+  N: [230,  81,   0],
+  G: [106,  27, 154],
+  O: [183,  28,  28],
+};
+const BW_HEADER_RGB = [51, 51, 51];
+const FREE_FILL_RGB = [240, 230, 255];
+const FREE_TEXT_RGB = [100,  80, 140];
+
+/**
+ * Draw one bingo card at (x, y) with the given card width.
+ * Cells are always square (cellH = cellW). Fonts scale with cell size so
+ * full-page and half-page layouts both look balanced.
+ */
+function drawBingoCard(doc, { x, y, cardW, card, cardIdx, headerH, showCardNumbers, color }) {
+  const cols  = ['B','I','N','G','O'];
+  const cellW = cardW / 5;
+  const cellH = cellW;
+
+  // Font sizes scale with cell geometry (pt-per-mm tuned from the full-page design)
+  const headerFont    = Math.max(10, Math.round(headerH * 1.15));
+  const dataFont      = Math.max(8,  Math.round(cellW  * 0.37));
+  const dataFontSmall = Math.max(7,  Math.round(cellW  * 0.28));
+  const freeFont      = Math.max(7,  Math.round(cellW  * 0.26));
+
+  // Header row
+  cols.forEach((col, ci) => {
+    const cx = x + ci * cellW;
+    doc.setFillColor(...(color ? COL_RGB[col] : BW_HEADER_RGB));
+    doc.rect(cx, y, cellW, headerH, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(headerFont);
+    doc.text(col, cx + cellW / 2, y + headerH / 2, { align: 'center', baseline: 'middle' });
+  });
+
+  // Data cells
+  doc.setLineWidth(0.4);
+  doc.setDrawColor(153, 153, 153);
+  for (let row = 0; row < 5; row++) {
+    for (let ci = 0; ci < 5; ci++) {
+      const cx     = x + ci * cellW;
+      const cy     = y + headerH + row * cellH;
+      const val    = card[ci][row];
+      const isFree = val === null;
+
+      doc.setFillColor(...(isFree ? FREE_FILL_RGB : [255, 255, 255]));
+      doc.rect(cx, cy, cellW, cellH, 'FD');
+
+      if (isFree) {
+        doc.setTextColor(...FREE_TEXT_RGB);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(freeFont);
+        doc.text('FREE', cx + cellW / 2, cy + cellH / 2, { align: 'center', baseline: 'middle' });
+      } else {
+        doc.setTextColor(30, 30, 30);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(String(val).length > 3 ? dataFontSmall : dataFont);
+        doc.text(String(val), cx + cellW / 2, cy + cellH / 2, { align: 'center', baseline: 'middle' });
+      }
+    }
+  }
+
+  // Card number label below table
+  if (showCardNumbers) {
+    const labelY = y + headerH + 5 * cellH + Math.max(5, headerH * 0.45);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(`Card ${cardIdx + 1}`, x + cardW / 2, labelY, { align: 'center' });
+  }
+}
+
+/**
+ * Draw a blank "show your work" area — light ruled lines every 7mm,
+ * matching the pattern used in the caller-view work-area CSS.
+ */
+function drawWorkArea(doc, { x, y, w, h }) {
+  doc.setDrawColor(210, 210, 210);
+  doc.setLineWidth(0.2);
+  const spacing = 7;
+  for (let ly = y + spacing; ly <= y + h; ly += spacing) {
+    doc.line(x, ly, x + w, ly);
+  }
+}
+
+function generateCardsPDF(cards, opts) {
+  const { style = 'full', color = true, showCardNumbers = true } = opts;
+  const { jsPDF } = jspdf;
+
+  if (style === 'full') {
+    const doc    = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+    const margin = 12;
+    const pageW  = 215.9;
+    const cardW  = pageW - 2 * margin;  // 191.9
+    const headerH = 14;
+    cards.forEach((card, idx) => {
+      if (idx > 0) doc.addPage();
+      drawBingoCard(doc, { x: margin, y: margin, cardW, card, cardIdx: idx, headerH, showCardNumbers, color });
+    });
+    doc.save('bingo-cards.pdf');
+    return;
+  }
+
+  // Landscape styles share layout math
+  const doc     = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+  const margin  = 12;
+  const pageW   = 279.4;
+  const pageH   = 215.9;
+  const gap     = 10;
+  const cardW   = (pageW - 2 * margin - gap) / 2;  // ~122.7
+  const headerH = 10;
+  const cellH   = cardW / 5;
+  const cardTotalH = headerH + 5 * cellH + (showCardNumbers ? 8 : 0);
+  const yStart  = margin + (pageH - 2 * margin - cardTotalH) / 2;
+
+  if (style === 'half') {
+    for (let i = 0; i < cards.length; i += 2) {
+      if (i > 0) doc.addPage();
+      drawBingoCard(doc, { x: margin, y: yStart, cardW, card: cards[i], cardIdx: i, headerH, showCardNumbers, color });
+      if (i + 1 < cards.length) {
+        drawBingoCard(doc, { x: margin + cardW + gap, y: yStart, cardW, card: cards[i + 1], cardIdx: i + 1, headerH, showCardNumbers, color });
+      }
+    }
+  } else { // 'work'
+    const workX = margin + cardW + gap;
+    const workH = headerH + 5 * cellH;
+    cards.forEach((card, idx) => {
+      if (idx > 0) doc.addPage();
+      drawBingoCard(doc, { x: margin, y: yStart, cardW, card, cardIdx: idx, headerH, showCardNumbers, color });
+      drawWorkArea(doc, { x: workX, y: yStart, w: cardW, h: workH });
+    });
+  }
+
+  doc.save('bingo-cards.pdf');
 }
 
 function escHtml(s) {
