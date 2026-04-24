@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Math Bingo Caller</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <style>
 /* ── CSS Variables ── */
 :root {
@@ -67,7 +70,6 @@ body {
 #topbar {
   height: var(--topbar-h);
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -90,6 +92,7 @@ body {
   transition: background .15s;
 }
 .icon-btn:hover { background: var(--surface2); }
+.icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .topbar-right { display: flex; gap: 6px; }
 
 /* ── Notification banner ── */
@@ -97,7 +100,6 @@ body {
   padding: 8px 16px;
   font-size: .85rem;
   line-height: 1.5;
-  border-bottom: 1px solid var(--border);
   background: var(--surface2);
   display: flex;
   gap: 8px;
@@ -127,7 +129,6 @@ body {
   order: 2;
   flex-shrink: 0;
   background: var(--surface);
-  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   max-height: 200px;
@@ -190,6 +191,76 @@ body {
 .board-cell.called {
   font-weight: 700;
   color: #fff;
+}
+#board-grid.mode-hidden,
+#recent-balls-strip.mode-hidden { display: none; }
+
+/* ── Recent Balls Strip ── */
+#recent-balls-strip {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: 90px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 16px;
+  flex-shrink: 0;
+}
+.recent-ball-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 80px;
+}
+.recent-ball-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+}
+.recent-ball-circle[data-col="B"] { background: var(--col-B); }
+.recent-ball-circle[data-col="I"] { background: var(--col-I); }
+.recent-ball-circle[data-col="N"] { background: var(--col-N); }
+.recent-ball-circle[data-col="G"] { background: var(--col-G); }
+.recent-ball-circle[data-col="O"] { background: var(--col-O); }
+.recent-ball-label {
+  font-size: 0.72rem;
+  text-align: center;
+  color: var(--text-muted);
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@keyframes ball-enter {
+  0%   { transform: translateX(-80px) scale(0.72); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: translateX(0)     scale(1);    opacity: 1; }
+}
+@keyframes ball-exit {
+  0%   { opacity: 1; max-width: 90px; transform: scale(1); }
+  35%  { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 0; max-width: 0px; padding: 0; transform: scale(0.8); }
+}
+.recent-ball-card.ball-entering {
+  animation: ball-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.recent-ball-card.ball-exiting {
+  overflow: hidden;
+  animation: ball-exit 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 /* ── Problem area ── */
@@ -263,7 +334,7 @@ body {
 #col-chip.hidden { display: none; }
 
 #problem-text {
-  font-size: calc(4rem * var(--font-scale));
+  font-size: calc(var(--problem-font-size, 4rem) * var(--font-scale));
   font-weight: 700;
   text-align: center;
   line-height: 1.1;
@@ -338,7 +409,6 @@ body {
 #bottom-nav {
   height: var(--bottomnav-h);
   background: var(--surface);
-  border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -365,6 +435,7 @@ body {
 }
 .nav-btn.primary:hover { opacity: .88; }
 .nav-btn:disabled { opacity: .35; cursor: default; }
+.nav-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* ── Overlays ── */
 .overlay {
@@ -460,6 +531,7 @@ body {
   color: var(--primary-fg);
   border-color: var(--primary);
 }
+.seg-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 select {
   padding: 5px 8px;
   border-radius: 6px;
@@ -518,25 +590,372 @@ kbd {
 
 /* ── Font scale variants ── */
 [data-fontsize="small"]  { --font-scale: 0.65; }
-[data-fontsize="medium"] { --font-scale: 0.85; }
-[data-fontsize="large"]  { --font-scale: 1; }
-[data-fontsize="xlarge"] { --font-scale: 1.35; }
+[data-fontsize="medium"] { --font-scale: 0.80; }
+[data-fontsize="large"]  { --font-scale: 1.00; }
+[data-fontsize="xlarge"] { --font-scale: 1.15; }
 
 /* ── Utility ── */
 [hidden] { display: none !important; }
+
+/* ── Homepage ── */
+#homepage-view {
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.hp-inner {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+#hp-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+#hp-header h1 {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -.03em;
+  margin-bottom: 8px;
+}
+#hp-header p { color: var(--text-muted); font-size: 1.05rem; }
+
+#hp-upload-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px 22px;
+  margin-bottom: 36px;
+  box-shadow: var(--shadow);
+}
+#hp-upload-section h2,
+#hp-sets-section h2 {
+  font-size: .8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.hp-upload-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.hp-btn {
+  padding: 10px 20px;
+  font-size: .95rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+  transition: background .15s;
+  white-space: nowrap;
+}
+.hp-btn:hover { background: var(--border); }
+.hp-btn.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.hp-btn.primary:hover { opacity: .88; }
+.hp-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+#hp-upload-error {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #ffebee;
+  color: #b71c1c;
+  border-radius: 6px;
+  font-size: .88rem;
+  border: 1px solid #ef9a9a;
+  line-height: 1.5;
+}
+[data-theme="dark"] #hp-upload-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+.hp-grade { margin-bottom: 30px; }
+.hp-grade-header {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 10px;
+  padding-bottom: 7px;
+  border-bottom: 2px solid var(--border);
+}
+.hp-course {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.hp-course-name {
+  font-size: .87rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 190px;
+  flex-shrink: 0;
+  padding-top: 8px;
+}
+.hp-course-sets { flex: 1; }
+.hp-coming-soon { font-size: .82rem; color: var(--text-muted); font-style: italic; }
+.hp-set-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; gap: 8px;
+}
+.hp-set-name { font-size: .87rem; font-weight: 600; }
+.hp-set-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.hp-set-btn {
+  padding: 4px 12px; font-size: .82rem; font-weight: 600;
+  border-radius: 6px; border: 1px solid var(--border);
+  cursor: pointer; background: var(--surface2); color: var(--text);
+  transition: background .15s; white-space: nowrap;
+}
+.hp-set-btn:hover { background: var(--border); }
+.hp-set-btn.hp-set-host { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.hp-set-btn.hp-set-host:hover { opacity: .88; }
+.hp-set-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* Back button — only shown in caller view */
+#btn-back-home { margin-right: 4px; }
+
+/* ── Upload view ── */
+#upload-view {
+  width: 100%; min-height: 100vh; overflow-y: auto;
+  background: var(--bg); display: flex; justify-content: center;
+}
+#uv-header {
+  margin-bottom: 28px;
+}
+#uv-header h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 6px; }
+#uv-header p { color: var(--text-muted); font-size: 1.05rem; margin-bottom: 0; }
+#uv-back-btn { margin-bottom: 20px; }
+#uv-body {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px 22px;
+  box-shadow: var(--shadow);
+}
+#uv-upload-error {
+  margin-top: 12px; padding: 8px 12px;
+  background: #ffebee; color: #b71c1c;
+  border-radius: 6px; font-size: .88rem;
+  border: 1px solid #ef9a9a; line-height: 1.5;
+}
+[data-theme="dark"] #uv-upload-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+
+#hp-set-error {
+  margin-top: 12px; padding: 8px 12px;
+  background: #ffebee; color: #b71c1c;
+  border-radius: 6px; font-size: .88rem;
+  border: 1px solid #ef9a9a; line-height: 1.5;
+}
+[data-theme="dark"] #hp-set-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+/* ── Print view shell ── */
+#print-view {
+  display: flex; flex-direction: column; height: 100vh;
+  background: var(--bg); overflow: hidden;
+}
+#pv-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: var(--topbar-h);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow); flex-shrink: 0;
+}
+#pv-title {
+  flex: 1; font-weight: 700; font-size: .95rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#pv-body {
+  display: flex; flex: 1; overflow: hidden; gap: 0;
+}
+
+/* ── Options panel ── */
+#pv-options {
+  width: 280px; flex-shrink: 0; overflow-y: auto;
+  padding: 20px 20px 24px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; flex-direction: column; gap: 20px;
+}
+.pv-opt-label {
+  display: block; font-size: .78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-muted); margin-bottom: 8px;
+}
+#pv-count {
+  width: 80px; padding: 7px 10px; font-size: .95rem; font-weight: 600;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); text-align: center;
+}
+#pv-style-picker { display: flex; flex-direction: column; gap: 8px; }
+.pv-style-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+  border: 2px solid var(--border); background: var(--surface2);
+  transition: border-color .15s, background .15s;
+}
+.pv-style-card.active { border-color: var(--primary); background: var(--col-B-light); }
+.pv-style-card span { font-size: .88rem; font-weight: 600; }
+.pv-style-card small { display: block; font-size: .75rem; color: var(--text-muted); }
+.pv-style-thumb {
+  width: 36px; height: 28px; border: 1px solid var(--border);
+  border-radius: 3px; flex-shrink: 0; background: var(--surface);
+  position: relative; overflow: hidden;
+}
+.pv-thumb-full::after {
+  content: ''; position: absolute; inset: 3px;
+  border: 1px solid #999;
+}
+.pv-thumb-half::before, .pv-thumb-half::after {
+  content: ''; position: absolute; top: 3px; bottom: 3px; width: 43%;
+  border: 1px solid #999;
+}
+.pv-thumb-half::before { left: 3px; }
+.pv-thumb-half::after  { right: 3px; }
+.pv-thumb-work::before, .pv-thumb-work::after {
+  content: ''; position: absolute; width: 43%;
+  border: 1px solid #999;
+}
+.pv-thumb-work::before { left: 3px; top: 3px; height: 50%; }
+.pv-thumb-work::after  { right: 3px; top: 3px; height: 50%; }
+#pv-dl-error {
+  padding: 8px 12px; background: #ffebee; color: #b71c1c;
+  border-radius: 6px; font-size: .85rem;
+  border: 1px solid #ef9a9a;
+}
+[data-theme="dark"] #pv-dl-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+/* ── Preview panel ── */
+#pv-preview {
+  flex: 1; overflow-y: auto; padding: 20px 24px;
+}
+.pv-preview-header {
+  font-size: .78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-muted); margin-bottom: 12px;
+}
+#pv-problems-table table {
+  width: 100%; border-collapse: collapse; font-size: .88rem;
+}
+#pv-problems-table th {
+  text-align: left; padding: 5px 10px; font-size: .75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: #fff;
+  position: sticky; top: 0;
+}
+#pv-problems-table td {
+  padding: 5px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+#pv-problems-table tr:last-child td { border-bottom: none; }
 </style>
 </head>
 <body>
-<div id="app">
+
+<!-- ═══════════════════════════════════════════════════
+     HOMEPAGE VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="homepage-view">
+  <div class="hp-inner">
+    <div id="hp-header">
+      <h1>Math Bingo</h1>
+      <p>Pick a set to play, or upload your own.</p>
+    </div>
+
+    <div id="hp-upload-section">
+      <button class="hp-btn" id="hp-upload-nav-btn">📂 Upload Your Own</button>
+    </div>
+
+    <div id="hp-sets-section">
+      <h2>Browse Sets</h2>
+      <div id="hp-grades"><!-- rendered by renderHomepage() --></div>
+      <div id="hp-set-error" hidden></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     UPLOAD VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="upload-view" hidden>
+  <div class="hp-inner">
+    <div id="uv-header">
+      <button class="icon-btn" id="uv-back-btn">← Back</button>
+      <h1>Upload Your Own CSV</h1>
+      <p>Create a custom set from any spreadsheet.</p>
+    </div>
+    <div id="uv-body">
+      <div class="hp-upload-row">
+        <button class="hp-btn primary" id="uv-upload-btn">📂 Choose File</button>
+        <button class="hp-btn" id="uv-help-btn">Format Help</button>
+        <button class="hp-btn" id="uv-template-btn">Download Template</button>
+      </div>
+      <div id="uv-upload-error" hidden></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     PRINT VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="print-view" hidden>
+  <div id="pv-topbar">
+    <button class="icon-btn" id="pv-back-btn">← Back</button>
+    <span id="pv-title"></span>
+    <button class="hp-btn primary" id="pv-host-btn">▶ Host Game</button>
+  </div>
+  <div id="pv-body">
+    <!-- Left: options + download -->
+    <div id="pv-options">
+      <div class="pv-opt-group">
+        <label class="pv-opt-label">Number of cards</label>
+        <input id="pv-count" type="number" min="1" max="200" value="30">
+      </div>
+      <div class="pv-opt-group">
+        <label class="pv-opt-label">Color</label>
+        <div class="seg-group">
+          <button class="seg-btn active" data-pv-color="color">Color</button>
+          <button class="seg-btn" data-pv-color="bw">Black &amp; White</button>
+        </div>
+      </div>
+      <div class="pv-opt-group">
+        <label class="pv-opt-label">Card style</label>
+        <div id="pv-style-picker">
+          <label class="pv-style-card active" data-pv-style="full">
+            <div class="pv-style-thumb pv-thumb-full"></div>
+            <div><span>Full Page</span><small>1 per page · portrait</small></div>
+          </label>
+          <label class="pv-style-card" data-pv-style="half">
+            <div class="pv-style-thumb pv-thumb-half"></div>
+            <div><span>Half-Page</span><small>2 per page · landscape</small></div>
+          </label>
+          <label class="pv-style-card" data-pv-style="work">
+            <div class="pv-style-thumb pv-thumb-work"></div>
+            <div><span>Work Area</span><small>2 per page · work space</small></div>
+          </label>
+        </div>
+      </div>
+      <button class="hp-btn primary" id="pv-download-btn">⬇ Download Cards</button>
+      <div id="pv-dl-error" hidden></div>
+    </div>
+    <!-- Right: problem/answer preview -->
+    <div id="pv-preview">
+      <div class="pv-preview-header">Problems &amp; Answers</div>
+      <div id="pv-problems-table"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     CALLER VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="app" hidden>
 
   <!-- Top bar -->
   <div id="topbar">
+    <button class="icon-btn" id="btn-back-home">← Sets</button>
     <button class="icon-btn" id="btn-settings">⚙ Settings</button>
     <div class="spacer"></div>
     <div class="center" id="progress-display"></div>
     <div class="spacer"></div>
     <div class="topbar-right">
-      <button class="icon-btn" id="btn-help">? Help</button>
+      <button class="icon-btn" id="btn-help">Help</button>
     </div>
   </div>
 
@@ -548,8 +967,8 @@ kbd {
 
     <!-- Called numbers board -->
     <div id="board-panel">
-      <div class="board-header">Called Numbers</div>
       <div id="board-grid"></div>
+      <div id="recent-balls-strip" class="mode-hidden"></div>
     </div>
 
     <!-- Problem display -->
@@ -607,6 +1026,7 @@ kbd {
         <tr><td><kbd>↑</kbd></td><td>Toggle answer visibility</td></tr>
         <tr><td><kbd>P</kbd></td><td>Pause / resume auto-advance timer</td></tr>
         <tr><td><kbd>B</kbd></td><td>Toggle called-numbers board</td></tr>
+        <tr><td><kbd>K</kbd></td><td>Toggle board style (Grid / Recent Balls)</td></tr>
         <tr><td><kbd>R</kbd></td><td>Reset game (with confirmation)</td></tr>
         <tr><td><kbd>S</kbd></td><td>Open / close settings</td></tr>
         <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
@@ -630,6 +1050,36 @@ kbd {
   </div>
 </div>
 
+<!-- CSV Format Help overlay -->
+<div class="overlay" id="csv-help-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2>CSV Format Guide</h2>
+      <button class="close-btn" id="btn-close-csv-help">✕</button>
+    </div>
+    <div class="panel-body">
+      <p style="margin-bottom:12px;font-size:.93rem;">Your CSV file must have three columns with these exact headers:</p>
+      <table class="shortcuts-table" style="margin-bottom:16px;">
+        <tr><td><strong>column</strong></td><td>One of <kbd>B</kbd> <kbd>I</kbd> <kbd>N</kbd> <kbd>G</kbd> <kbd>O</kbd></td></tr>
+        <tr><td><strong>problem</strong></td><td>The problem text shown on screen (e.g. <em>-4 + 3</em>)</td></tr>
+        <tr><td><strong>answer</strong></td><td>A numeric answer students mark on their card (e.g. <em>-1</em>)</td></tr>
+      </table>
+      <p style="margin-bottom:8px;font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Example</p>
+      <pre style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:.85rem;overflow-x:auto;line-height:1.6;">column,problem,answer
+B,-10 + (-15),-25
+B,-8 + (-12),-20
+I,-7 + (-6),-13
+N,-4 + 3,-1
+G,4 + 5,9
+O,20 + (-3),17</pre>
+      <p style="margin-top:14px;font-size:.87rem;color:var(--text-muted);line-height:1.6;">
+        Each column needs at least <strong>8 distinct answer values</strong> for bingo cards to work.<br>
+        Answer ranges should not overlap between columns.
+      </p>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="file-input" accept=".csv">
 
 <script>
@@ -639,87 +1089,81 @@ kbd {
    DEFAULT PROBLEMS (80 integer addition/subtraction problems)
    Columns: B(-25 to -16), I(-15 to -6), N(-5 to 5), G(6-15), O(16-25)
    ============================================================ */
-const DEFAULT_CSV = `column,problem,answer
-B,-10 + (-15),-25
-B,-13 - 12,-25
-B,-8 + (-16),-24
-B,-20 - 4,-24
-B,-11 + (-12),-23
-B,-9 + (-13),-22
-B,-14 - 8,-22
-B,-12 + (-9),-21
-B,-18 - 3,-21
-B,-8 + (-12),-20
-B,-15 - 5,-20
-B,-10 + (-9),-19
-B,-9 + (-9),-18
-B,-11 - 7,-18
-B,-5 + (-12),-17
-B,-7 + (-9),-16
-I,-8 + (-7),-15
-I,-11 - 4,-15
-I,-9 + (-5),-14
-I,-6 - 8,-14
-I,-7 + (-6),-13
-I,-10 - 3,-13
-I,-5 + (-7),-12
-I,-8 - 4,-12
-I,-6 + (-5),-11
-I,-4 + (-6),-10
-I,-5 + (-4),-9
-I,-3 + (-6),-9
-I,-2 + (-6),-8
-I,-3 + (-4),-7
-I,-1 + (-5),-6
-I,0 + (-6),-6
-N,-3 + (-2),-5
-N,-8 + 3,-5
-N,-6 + 2,-4
-N,-1 + (-3),-4
-N,-7 + 4,-3
-N,-5 + 2,-3
-N,-6 + 4,-2
-N,3 + (-5),-2
-N,-4 + 3,-1
-N,2 + (-3),-1
-N,-5 + 5,0
-N,-3 + 4,1
-N,-3 + 5,2
-N,-4 + 7,3
-N,-5 + 9,4
-N,-4 + 9,5
-G,10 + (-4),6
-G,3 + 3,6
-G,10 + (-3),7
-G,4 + 3,7
-G,10 + (-2),8
-G,5 + 3,8
-G,10 + (-1),9
-G,4 + 5,9
-G,15 + (-5),10
-G,4 + 7,11
-G,15 + (-3),12
-G,8 + 4,12
-G,15 + (-2),13
-G,8 + 6,14
-G,8 + 7,15
-G,9 + 6,15
-O,20 + (-4),16
-O,8 + 8,16
-O,20 + (-3),17
-O,9 + 8,17
-O,20 + (-2),18
-O,9 + 9,18
-O,20 + (-1),19
-O,25 + (-5),20
-O,12 + 8,20
-O,25 + (-4),21
-O,25 + (-3),22
-O,15 + 7,22
-O,25 + (-2),23
-O,25 + (-1),24
-O,15 + 10,25
-O,20 + 5,25`;
+/* ============================================================
+   PRE-BUILT BINGO SETS  (add set objects as { name, path } to fill in later)
+   ============================================================ */
+const BINGO_SETS = [
+  { grade: 'Kindergarten', courses: [
+    { name: 'Counting & Numbers', sets: [] },
+    { name: 'Comparing Numbers', sets: [] },
+  ]},
+  { grade: 'Grade 1', courses: [
+    { name: 'Addition', sets: [] },
+    { name: 'Subtraction', sets: [] },
+  ]},
+  { grade: 'Grade 2', courses: [
+    { name: 'Addition & Subtraction', sets: [] },
+    { name: 'Place Value', sets: [] },
+  ]},
+  { grade: 'Grade 3', courses: [
+    { name: 'Multiplication', sets: [] },
+    { name: 'Division', sets: [] },
+    { name: 'Fractions', sets: [] },
+  ]},
+  { grade: 'Grade 4', courses: [
+    { name: 'Multiplication & Division', sets: [] },
+    { name: 'Fractions & Decimals', sets: [] },
+  ]},
+  { grade: 'Grade 5', courses: [
+    { name: 'Fractions', sets: [] },
+    { name: 'Decimals & Place Value', sets: [] },
+    { name: 'Volume & Measurement', sets: [] },
+  ]},
+  { grade: 'Grade 6', courses: [
+    { name: 'Integer Operations', sets: [
+      { name: 'Addition & Subtraction', path: 'sets/grade-6/integer-operations-addition-subtraction.csv' },
+    ]},
+    { name: 'Ratios & Proportions', sets: [] },
+    { name: 'Expressions & Equations', sets: [] },
+  ]},
+  { grade: 'Grade 7', courses: [
+    { name: 'Proportional Relationships', sets: [] },
+    { name: 'Equations & Inequalities', sets: [] },
+    { name: 'Geometry', sets: [] },
+  ]},
+  { grade: 'Grade 8', courses: [
+    { name: 'Linear Equations', sets: [] },
+    { name: 'Systems of Equations', sets: [] },
+    { name: 'Pythagorean Theorem', sets: [] },
+  ]},
+  { grade: 'Algebra 1', courses: [
+    { name: 'Linear Functions', sets: [] },
+    { name: 'Quadratics', sets: [] },
+    { name: 'Polynomials', sets: [] },
+  ]},
+  { grade: 'Geometry', courses: [
+    { name: 'Triangles & Proofs', sets: [] },
+    { name: 'Area & Volume', sets: [] },
+    { name: 'Circles', sets: [] },
+  ]},
+  { grade: 'Algebra 2', courses: [
+    { name: 'Polynomials & Factoring', sets: [] },
+    { name: 'Exponential & Logarithmic', sets: [] },
+    { name: 'Rational Functions', sets: [] },
+  ]},
+  { grade: 'Pre-Calculus', courses: [
+    { name: 'Trigonometry', sets: [] },
+    { name: 'Functions & Transformations', sets: [] },
+  ]},
+  { grade: 'Calculus', courses: [
+    { name: 'Limits & Derivatives', sets: [] },
+    { name: 'Integrals', sets: [] },
+  ]},
+  { grade: 'Statistics', courses: [
+    { name: 'Probability', sets: [] },
+    { name: 'Distributions & Data', sets: [] },
+  ]},
+];
 
 /* ============================================================
    CSV PARSER (handles quoted fields, CRLF/LF, whitespace)
@@ -860,11 +1304,14 @@ const DEFAULT_SETTINGS = {
   fontSize: 'large',
   showBoard: true,
   boardContent: 'problems',   // 'problems' | 'answers'
-  boardShowUncalled: false,
   showColumn: true,
   showNavButtons: true,
+  showProgress: false,        // show call count in topbar
+  showRecentBalls: true,      // show recently-called strip
   autoAdvanceOn: false,
   autoAdvanceInterval: 20,
+  boardMode: 'recent',  // 'grid' | 'recent'
+  recentCount: 5,       // 1–10
 };
 
 function loadSettings() {
@@ -890,7 +1337,9 @@ const state = {
   calledAnswers: {},   // { B: Set<number>, I: Set<number>, ... }
   columnAnswers: {},   // { B: number[], ... } — sorted distinct answers per column
   filename: 'default-problems.csv',
+  setName: '',
   gameOver: false,
+  currentView: 'home',
   settings: loadSettings(),
 };
 
@@ -922,6 +1371,7 @@ function initGame() {
   state.currentIndex = -1;
   state.calledAnswers = { B: new Set(), I: new Set(), N: new Set(), G: new Set(), O: new Set() };
   state.gameOver = false;
+  _lastRenderedIndex = -1;
 }
 
 function currentProblem() {
@@ -983,9 +1433,175 @@ function resetGame() {
 }
 
 /* ============================================================
+   VIEW SWITCHING
+   ============================================================ */
+function showView(view) {
+  state.currentView = view;
+  document.getElementById('homepage-view').hidden = (view !== 'home');
+  document.getElementById('upload-view').hidden   = (view !== 'upload');
+  document.getElementById('print-view').hidden    = (view !== 'print');
+  document.getElementById('app').hidden            = (view !== 'caller');
+  document.getElementById('btn-back-home').hidden  = (view !== 'caller');
+}
+
+function applyLoadedSet(problems, name, warnings = []) {
+  state.problems      = problems;
+  state.setName       = name;
+  state.filename      = name;
+  state.columnAnswers = buildColumnAnswers(problems);
+  if (warnings.some(w => w.startsWith('⚠'))) showNotification(warnings, 'warning');
+}
+
+function findSet(gradeName, courseName, setName) {
+  const g = BINGO_SETS.find(g => g.grade === gradeName);
+  if (!g) return null;
+  const c = g.courses.find(c => c.name === courseName);
+  if (!c) return null;
+  return c.sets.find(s => s.name === setName) || null;
+}
+
+function fetchAndLoadSet(set, label, action, errElId = 'hp-set-error') {
+  const go = csv => {
+    const { problems, warnings, errors } = loadProblems(csv, label);
+    if (errors.length) {
+      const el = document.getElementById(errElId);
+      if (el) { el.textContent = errors.join(' · '); el.hidden = false; }
+      return;
+    }
+    applyLoadedSet(problems, label, warnings);
+    if (action === 'host') {
+      resetGame(); showView('caller'); computeProblemFontSize(); render();
+    } else {
+      showView('print'); renderPrintView();
+    }
+  };
+  if (set.path) {
+    if (location.protocol === 'file:') {
+      const el = document.getElementById(errElId);
+      if (el) { el.textContent = 'Pre-built sets require an HTTP server. Open via VS Code Live Server, or host online.'; el.hidden = false; }
+      return;
+    }
+    fetch(set.path).then(r => { if (!r.ok) throw new Error(); return r.text(); })
+      .then(go).catch(() => {
+        const el = document.getElementById(errElId);
+        if (el) { el.textContent = '⚠ Could not load set file.'; el.hidden = false; }
+      });
+  } else if (set.csv) {
+    go(set.csv);
+  }
+}
+
+function loadSetAndPlay(csv, filename, errorElId = null) {
+  // Clear any previous error before processing
+  if (errorElId) {
+    const el = document.getElementById(errorElId);
+    if (el) el.hidden = true;
+  }
+  const { problems, warnings, errors } = loadProblems(csv, filename);
+  if (errors.length) {
+    if (errorElId) {
+      const el = document.getElementById(errorElId);
+      if (el) { el.textContent = errors.join(' · '); el.hidden = false; }
+    } else {
+      showNotification(errors, 'error');
+    }
+    return;
+  }
+  const name = filename.replace(/\.csv$/i, '').replace(/[-_]/g, ' ');
+  applyLoadedSet(problems, name, warnings);
+  resetGame();
+  showView('caller');
+  computeProblemFontSize();
+  render();
+}
+
+function renderHomepage() {
+  const container = document.getElementById('hp-grades');
+  container.innerHTML = BINGO_SETS.map(grade => {
+    const courses = grade.courses.map(course => {
+      const sets = course.sets.length
+        ? course.sets.map(set =>
+            `<div class="hp-set-row" data-grade="${escHtml(grade.grade)}" data-course="${escHtml(course.name)}" data-set="${escHtml(set.name)}">
+              <span class="hp-set-name">${escHtml(set.name)}</span>
+              <div class="hp-set-actions">
+                <button class="hp-set-btn hp-set-host">▶ Host</button>
+                <button class="hp-set-btn hp-set-print">🖨 Print Cards</button>
+              </div>
+            </div>`
+          ).join('')
+        : `<span class="hp-coming-soon">Coming soon</span>`;
+      return `<div class="hp-course">
+        <span class="hp-course-name">${escHtml(course.name)}</span>
+        <div class="hp-course-sets">${sets}</div>
+      </div>`;
+    }).join('');
+    return `<div class="hp-grade">
+      <div class="hp-grade-header">${escHtml(grade.grade)}</div>
+      ${courses}
+    </div>`;
+  }).join('');
+
+  // Wire Host + Print Cards button clicks via event delegation
+  container.addEventListener('click', e => {
+    const hostBtn  = e.target.closest('.hp-set-host');
+    const printBtn = e.target.closest('.hp-set-print');
+    if (!hostBtn && !printBtn) return;
+    const row = (hostBtn || printBtn).closest('.hp-set-row');
+    const { grade: gradeName, course: courseName, set: setName } = row.dataset;
+    const set = findSet(gradeName, courseName, setName);
+    if (!set) return;
+    document.getElementById('hp-set-error').hidden = true;
+    const label = `${gradeName} \u2014 ${courseName} \u2014 ${setName}`;
+    fetchAndLoadSet(set, label, hostBtn ? 'host' : 'print');
+  });
+}
+
+function renderPrintView() {
+  document.getElementById('pv-title').textContent = state.setName || 'Print Cards';
+
+  const cols = ['B','I','N','G','O'];
+  const byCol = {};
+  cols.forEach(c => byCol[c] = []);
+  state.problems.forEach(p => { if (byCol[p.column]) byCol[p.column].push(p); });
+
+  const rows = cols.flatMap(col =>
+    byCol[col].map((p, i) => {
+      const bg = COL_COLORS[col];
+      const colCell = i === 0
+        ? `<td rowspan="${byCol[col].length}" style="background:${bg};color:#fff;font-weight:800;text-align:center;width:32px;">${col}</td>`
+        : '';
+      return `<tr>${colCell}<td>${escHtml(p.problem)}</td><td style="color:var(--text-muted)">${escHtml(String(p.answer))}</td></tr>`;
+    })
+  ).join('');
+
+  document.getElementById('pv-problems-table').innerHTML = `
+    <table>
+      <thead><tr>
+        <th style="background:var(--text-muted);width:32px;"></th>
+        <th style="background:var(--text-muted)">Problem</th>
+        <th style="background:var(--text-muted)">Answer</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function downloadTemplate() {
+  const a = Object.assign(document.createElement('a'), {
+    href: 'sets/bingo-template.csv',
+    download: 'bingo-template.csv',
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* ============================================================
    AUTO-ADVANCE TIMER
    ============================================================ */
 let rafId = null;
+let _lastRenderedIndex = -1;
+let _fileInputContext = 'upload';
+let _resizeDebounceTimer = null;
 let timerEnd = null;
 let timerPaused = false;
 let timerRemainingMs = null;
@@ -1055,6 +1671,47 @@ function updateTimerDisplay(remaining) {
 }
 
 /* ============================================================
+   FONT AUTO-FIT
+   ============================================================ */
+function computeProblemFontSize() {
+  if (!state.problems || state.problems.length === 0) return;
+  const problemArea = document.getElementById('problem-area');
+  if (!problemArea || problemArea.offsetWidth === 0) return;
+
+  const longestProblem = state.problems.reduce(
+    (best, p) => p.problem.length > best.length ? p.problem : best, ''
+  );
+
+  // #problem-card has max-width:700px; cap there and leave padding margin
+  const availW = Math.min(problemArea.offsetWidth - 40, 660);
+  const availH = problemArea.offsetHeight * 0.42;
+  if (availW <= 0 || availH <= 0) return;
+
+  const probe = document.createElement('span');
+  probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:700;line-height:1.1;letter-spacing:-0.01em;top:-9999px;left:-9999px;';
+  if (longestProblem.includes('\\') && typeof katex !== 'undefined') {
+    try { probe.innerHTML = katex.renderToString(longestProblem, { throwOnError: false, displayMode: false }); }
+    catch(e) { probe.textContent = longestProblem; }
+  } else {
+    probe.textContent = longestProblem;
+  }
+  document.body.appendChild(probe);
+
+  let lo = 16, hi = 400, best = lo;
+  for (let i = 0; i < 20; i++) {
+    const mid = Math.floor((lo + hi) / 2);
+    probe.style.fontSize = mid + 'px';
+    if (probe.offsetWidth <= availW && probe.offsetHeight <= availH) {
+      best = mid; lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  document.body.removeChild(probe);
+  document.documentElement.style.setProperty('--problem-font-size', best + 'px');
+}
+
+/* ============================================================
    FORMAT HELPERS
    ============================================================ */
 const COL_COLORS = { B: '#1565c0', I: '#2e7d32', N: '#e65100', G: '#6a1b9a', O: '#b71c1c' };
@@ -1084,31 +1741,136 @@ function applySettings() {
   const s = state.settings;
   document.documentElement.setAttribute('data-theme', s.theme);
   document.documentElement.setAttribute('data-fontsize', s.fontSize);
-  document.getElementById('board-panel').classList.toggle('hidden', !s.showBoard);
   document.getElementById('bottom-nav').hidden = !s.showNavButtons;
+  const isRecent = s.boardMode === 'recent';
+  const panelVisible = isRecent ? (s.showBoard && s.showRecentBalls) : s.showBoard;
+  document.getElementById('board-panel').classList.toggle('hidden', !panelVisible);
+  document.getElementById('board-grid').classList.toggle('mode-hidden', isRecent);
+  document.getElementById('recent-balls-strip').classList.toggle('mode-hidden', !isRecent);
 }
 
 function renderProgress() {
   const el = document.getElementById('progress-display');
+  if (!state.settings.showProgress) { el.textContent = ''; return; }
   const p = currentProblem();
   if (!p) { el.textContent = `${state.problems.length} problems loaded`; return; }
 
   const calledCount = Object.values(state.calledAnswers).reduce((s, set) => s + set.size, 0);
   const totalAnswers = Object.values(state.columnAnswers).reduce((s, arr) => s + arr.length, 0);
   const remaining = totalAnswers - calledCount;
-  el.textContent = `Call ${calledCount} of ${totalAnswers} answers • ${remaining} remaining`;
+  el.textContent = `${calledCount} of ${totalAnswers} called • ${remaining} remaining`;
 }
 
 function renderBoard() {
+  if (state.settings.boardMode === 'recent') {
+    renderRecentBalls();
+  } else {
+    renderBoardGrid();
+  }
+}
+
+function createBallCardEl(p) {
+  const showAnswer = state.settings.boardContent === 'answers';
+  const card = document.createElement('div');
+  card.className = 'recent-ball-card';
+  const circle = document.createElement('div');
+  circle.className = 'recent-ball-circle';
+  circle.setAttribute('data-col', p.column);
+  circle.textContent = p.column;
+  const label = document.createElement('div');
+  label.className = 'recent-ball-label';
+  renderMath(label, showAnswer ? String(p.answer) : p.problem);
+  card.appendChild(circle);
+  card.appendChild(label);
+  return card;
+}
+
+function renderRecentBalls() {
+  const strip = document.getElementById('recent-balls-strip');
+  const n = state.settings.recentCount;
+  const ci = state.currentIndex;
+  const isNewCall = ci > _lastRenderedIndex && ci >= 0;
+  _lastRenderedIndex = ci;
+
+  const visible = ci >= 0
+    ? state.history.slice(Math.max(0, ci + 1 - n), ci + 1)
+    : [];
+
+  if (!isNewCall || strip.children.length === 0) {
+    strip.innerHTML = '';
+    [...visible].reverse().forEach(p => strip.appendChild(createBallCardEl(p)));
+    return;
+  }
+
+  const willOverflow = strip.children.length >= n;
+  const allExisting  = [...strip.children];
+  const exiting      = willOverflow ? allExisting[allExisting.length - 1] : null;
+
+  // Pull exiting card out of flex flow NOW so it doesn't affect layout
+  // during FLIP measurement — removing it later won't cause any reflow
+  if (exiting) {
+    const er = exiting.getBoundingClientRect();
+    const sr = strip.getBoundingClientRect();
+    Object.assign(exiting.style, {
+      position: 'absolute',
+      left: (er.left - sr.left) + 'px',
+      top:  (er.top  - sr.top)  + 'px',
+      width: er.width + 'px',
+      margin: '0',
+      pointerEvents: 'none',
+    });
+  }
+
+  const staying = allExisting.filter(c => c !== exiting);
+
+  // FLIP step 1: record positions now that exiting is out of flow
+  const firstLefts = staying.map(c => c.getBoundingClientRect().left);
+
+  // Insert new card at left, invisible
+  const newCard = createBallCardEl(visible[visible.length - 1]);
+  Object.assign(newCard.style, { opacity: '0', transform: 'translateX(-70px) scale(0.78)', transition: 'none' });
+  strip.prepend(newCard);
+
+  // FLIP step 2: measure shifted positions, apply inverse transforms
+  staying.forEach((card, i) => {
+    const dx = firstLefts[i] - card.getBoundingClientRect().left;
+    card.style.transition = 'none';
+    card.style.transform = `translateX(${dx}px)`;
+  });
+
+  // Force reflow
+  strip.offsetWidth;
+
+  // FLIP step 3: play — all staying cards slide smoothly, new card springs in
+  requestAnimationFrame(() => {
+    const slide = 'transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    staying.forEach(c => { c.style.transition = slide; c.style.transform = ''; });
+    Object.assign(newCard.style, {
+      transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease',
+      transform: '', opacity: '1',
+    });
+
+    // Fade out the absolutely-positioned exiting card, then remove it
+    // Since it's out of flex flow, its removal causes zero layout shift
+    if (exiting) {
+      Object.assign(exiting.style, {
+        transition: 'transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.32s ease',
+        transform: 'translateX(90px) scale(0.78)',
+        opacity: '0',
+      });
+      setTimeout(() => exiting.remove(), 450);
+    }
+  });
+}
+
+function renderBoardGrid() {
   const grid = document.getElementById('board-grid');
   const cols = ['B','I','N','G','O'].filter(c => state.columnAnswers[c]);
   if (cols.length === 0) { grid.innerHTML = ''; return; }
 
-  const showUncalled = state.settings.boardShowUncalled;
   const showProblems = state.settings.boardContent === 'problems';
 
   // Build a map from (col, answer) → problem text for the called entries
-  // Use the history to get the problem text for each called answer
   const calledProblemMap = {};
   for (const p of state.history) {
     const key = `${p.column}:${p.answer}`;
@@ -1120,19 +1882,17 @@ function renderBoard() {
     const called = state.calledAnswers[col] || new Set();
     const color = COL_COLORS[col];
 
-    const cells = answers.map(a => {
-      const isCalled = called.has(a);
-      if (!isCalled && !showUncalled) return '';
-      const key = `${col}:${a}`;
-      const label = showProblems && isCalled ? (calledProblemMap[key] || String(a)) : String(a);
-      return `<div class="board-cell${isCalled ? ' called' : ''}"
-        style="${isCalled ? `background:${color}` : ''}"
-        title="${col} ${a}">${escHtml(label)}</div>`;
-    }).join('');
+    if (called.size === 0) return '';
 
-    // Don't render the column at all if it has no visible cells
-    const hasVisible = showUncalled || called.size > 0;
-    if (!hasVisible) return '';
+    const cells = answers.map(a => {
+      if (!called.has(a)) return '';
+      const key = `${col}:${a}`;
+      const label = showProblems ? (calledProblemMap[key] || String(a)) : String(a);
+      const labelHtml = label.includes('\\') && typeof katex !== 'undefined'
+        ? katex.renderToString(label, { throwOnError: false, displayMode: false })
+        : escHtml(label);
+      return `<div class="board-cell called" style="background:${color}" title="${col} ${a}">${labelHtml}</div>`;
+    }).join('');
 
     return `<div class="board-col">
       <div class="board-col-header" style="background:${color}">${col}</div>
@@ -1170,14 +1930,14 @@ function renderProblem() {
   }
 
   // Problem text
-  document.getElementById('problem-text').textContent = p.problem;
+  renderMath(document.getElementById('problem-text'), p.problem);
 
   // Answer section
   const answerReveal = document.getElementById('answer-reveal');
   answerReveal.hidden = !state.answerVisible;
   if (state.answerVisible) {
     const valEl = document.getElementById('answer-value');
-    valEl.textContent = formatAnswer(p.answer);
+    renderMath(valEl, formatAnswer(p.answer));
     valEl.setAttribute('data-col', p.column);
   }
 
@@ -1235,6 +1995,14 @@ function renderSettings() {
         <label for="s-show-nav">Show Next / Back buttons</label>
         <input type="checkbox" id="s-show-nav" ${s.showNavButtons ? 'checked' : ''}>
       </div>
+      <div class="settings-row">
+        <label for="s-show-progress">Show call count</label>
+        <input type="checkbox" id="s-show-progress" ${s.showProgress ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-show-recent">Show recently called numbers</label>
+        <input type="checkbox" id="s-show-recent" ${s.showRecentBalls ? 'checked' : ''}>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -1244,8 +2012,19 @@ function renderSettings() {
         <input type="checkbox" id="s-show-board" ${s.showBoard ? 'checked' : ''}>
       </div>
       <div class="settings-row">
-        <label for="s-board-uncalled">Show uncalled entries</label>
-        <input type="checkbox" id="s-board-uncalled" ${s.boardShowUncalled ? 'checked' : ''}>
+        <label>Board style <kbd>K</kbd></label>
+        <div class="seg-group">
+          <button class="seg-btn${s.boardMode==='grid'?' active':''}" data-board-mode="grid">Grid</button>
+          <button class="seg-btn${s.boardMode==='recent'?' active':''}" data-board-mode="recent">Recent Balls</button>
+        </div>
+      </div>
+      <div class="settings-row" id="s-recent-count-row"${s.boardMode==='recent'?'':' hidden'}>
+        <label>Show last N balls</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="icon-btn" id="s-recent-dec">−</button>
+          <span id="s-recent-val" style="min-width:24px;text-align:center;font-weight:700;">${s.recentCount}</span>
+          <button class="icon-btn" id="s-recent-inc">+</button>
+        </div>
       </div>
       <div class="settings-row">
         <label>Board shows</label>
@@ -1285,7 +2064,11 @@ function renderSettings() {
   `;
 
   // Wire settings panel events
-  document.getElementById('settings-load-file').onclick = () => document.getElementById('file-input').click();
+  const sBody = document.getElementById('settings-body');
+  document.getElementById('settings-load-file').onclick = () => {
+    _fileInputContext = 'settings';
+    document.getElementById('file-input').click();
+  };
   document.getElementById('s-auto-on').onchange = e => {
     state.settings.autoAdvanceOn = e.target.checked;
     saveSettings();
@@ -1307,15 +2090,44 @@ function renderSettings() {
     state.settings.showNavButtons = e.target.checked;
     saveSettings(); render();
   };
+  document.getElementById('s-show-progress').onchange = e => {
+    state.settings.showProgress = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-show-recent').onchange = e => {
+    state.settings.showRecentBalls = e.target.checked;
+    saveSettings(); render();
+  };
   document.getElementById('s-show-board').onchange = e => {
     state.settings.showBoard = e.target.checked;
     saveSettings(); render();
   };
-  document.getElementById('s-board-uncalled').onchange = e => {
-    state.settings.boardShowUncalled = e.target.checked;
-    saveSettings(); render();
-  };
-  const sBody = document.getElementById('settings-body');
+  sBody.querySelectorAll('[data-board-mode]').forEach(btn => {
+    btn.onclick = () => {
+      state.settings.boardMode = btn.dataset.boardMode;
+      _lastRenderedIndex = -1;
+      saveSettings(); renderSettings(); render();
+    };
+  });
+  const recentDec = sBody.querySelector('#s-recent-dec');
+  if (recentDec) {
+    recentDec.onclick = () => {
+      if (state.settings.recentCount > 1) {
+        state.settings.recentCount--;
+        saveSettings();
+        sBody.querySelector('#s-recent-val').textContent = state.settings.recentCount;
+        render();
+      }
+    };
+    sBody.querySelector('#s-recent-inc').onclick = () => {
+      if (state.settings.recentCount < 10) {
+        state.settings.recentCount++;
+        saveSettings();
+        sBody.querySelector('#s-recent-val').textContent = state.settings.recentCount;
+        render();
+      }
+    };
+  }
   sBody.querySelectorAll('[data-board-content]').forEach(btn => {
     btn.onclick = () => {
       state.settings.boardContent = btn.dataset.boardContent;
@@ -1344,8 +2156,125 @@ function renderSettings() {
   };
 }
 
+/* ============================================================
+   BINGO CARD GENERATION
+   ============================================================ */
+function generateBingoCards(n) {
+  const cols = ['B','I','N','G','O'];
+  return Array.from({ length: n }, () =>
+    cols.map((col, ci) => {
+      const pool = [...(state.columnAnswers[col] || [])];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const five = pool.slice(0, 5);
+      if (ci === 2) five[2] = null; // FREE center
+      return five;
+    })
+  );
+}
+
+function renderCardsHTML(cards, setName, opts = {}) {
+  const { style = 'full', color = true } = opts;
+  const cols = ['B','I','N','G','O'];
+
+  const makeCard = (card, i) => {
+    const rows = [0,1,2,3,4].map(row => {
+      const cells = cols.map((col, ci) => {
+        const val = card[ci][row];
+        if (val === null) return `<td class="free">FREE</td>`;
+        return `<td>${escHtml(String(val))}</td>`;
+      }).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    const headers = cols.map(c => {
+      const bg = color ? COL_COLORS[c] : '#333';
+      return `<th style="background:${bg}">${c}</th>`;
+    }).join('');
+    const workSection = style === 'work' ? `<div class="work-area"></div>` : '';
+    return `<div class="card-wrap">
+      <div class="card-label">Card ${i + 1} &mdash; ${escHtml(setName)}</div>
+      <table><thead><tr>${headers}</tr></thead><tbody>${rows}</tbody></table>
+      ${workSection}
+    </div>`;
+  };
+
+  let cardPages = '';
+  if (style === 'full') {
+    cardPages = cards.map((card, i) =>
+      `<div class="card-page">${makeCard(card, i)}</div>`
+    ).join('');
+  } else {
+    for (let i = 0; i < cards.length; i += 2) {
+      const a = makeCard(cards[i], i);
+      const b = i + 1 < cards.length ? makeCard(cards[i + 1], i + 1) : '<div class="card-wrap"></div>';
+      cardPages += `<div class="card-page">${a}${b}</div>`;
+    }
+  }
+
+  const freeColor = color ? '#f0e6ff' : '#eee';
+  const pageCSS = style === 'full'
+    ? `@page { size: letter portrait; margin: 10mm; } .card-page { page-break-after: always; }`
+    : `@page { size: letter landscape; margin: 8mm; } .card-page { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; page-break-after: always; }`;
+  const workCSS = style === 'work'
+    ? `.work-area { margin-top: 6mm; border-top: 1px solid #ccc; height: 35mm; background-image: repeating-linear-gradient(transparent, transparent 7mm, #ddd 7mm, #ddd calc(7mm + 0.5px)); }`
+    : '';
+
+  return `<!DOCTYPE html><html lang="en"><head>
+    <meta charset="utf-8">
+    <title>Bingo Cards \u2014 ${escHtml(setName)}</title>
+    <style>
+      *, *::before, *::after { box-sizing: border-box; }
+      body { font-family: sans-serif; margin: 0; padding: 0; background: #fff; }
+      .card-page { padding: 0; }
+      .card-wrap { overflow: hidden; }
+      .card-label { font-size: .7rem; color: #666; margin-bottom: 3mm; }
+      table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+      th { color: #fff; font-size: 1.2em; padding: 5px 2px; text-align: center; }
+      td { border: 1.5px solid #999; text-align: center; padding: 6px 2px; font-size: .95em; font-weight: 600; }
+      .free { background: ${freeColor}; font-weight: 800; color: #555; font-size: .85em; }
+      ${pageCSS}
+      ${workCSS}
+    <\/style>
+  <\/head><body>${cardPages}<\/body><\/html>`;
+}
+
+function pvDownloadCards() {
+  const n     = parseInt(document.getElementById('pv-count').value, 10);
+  const style = document.querySelector('.pv-style-card.active')?.dataset.pvStyle || 'full';
+  const color = document.querySelector('[data-pv-color].active')?.dataset.pvColor !== 'bw';
+  const errEl = document.getElementById('pv-dl-error');
+  errEl.hidden = true;
+
+  if (isNaN(n) || n < 1) {
+    errEl.textContent = 'Enter a valid card count (1–200).'; errEl.hidden = false; return;
+  }
+  const thinCols = ['B','I','N','G','O'].filter(c => (state.columnAnswers[c] || []).length < 5);
+  if (thinCols.length) {
+    errEl.textContent = `Not enough answers in columns: ${thinCols.join(', ')} (need \u2265 5 each).`;
+    errEl.hidden = false; return;
+  }
+  const cards = generateBingoCards(n);
+  const html  = renderCardsHTML(cards, state.setName || 'Bingo', { style, color });
+  const w = window.open('', '_blank');
+  if (!w) { errEl.textContent = 'Pop-up blocked \u2014 allow pop-ups for this page.'; errEl.hidden = false; return; }
+  w.document.write(html);
+  w.document.close();
+}
+
 function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderMath(el, text) {
+  if (text && text.includes('\\') && typeof katex !== 'undefined') {
+    try {
+      el.innerHTML = katex.renderToString(text, { throwOnError: false, displayMode: false });
+      return;
+    } catch(e) {}
+  }
+  el.textContent = text;
 }
 
 /* ============================================================
@@ -1358,10 +2287,10 @@ function closeOverlay(id) {
   document.getElementById(id).hidden = true;
 }
 function closeAllOverlays() {
-  ['settings-overlay','help-overlay','confirm-overlay'].forEach(closeOverlay);
+  ['settings-overlay','help-overlay','confirm-overlay','csv-help-overlay'].forEach(closeOverlay);
 }
 function anyOverlayOpen() {
-  return ['settings-overlay','help-overlay','confirm-overlay'].some(id => !document.getElementById(id).hidden);
+  return ['settings-overlay','help-overlay','confirm-overlay','csv-help-overlay'].some(id => !document.getElementById(id).hidden);
 }
 
 function showConfirm() { openOverlay('confirm-overlay'); }
@@ -1377,32 +2306,6 @@ function showNotification(lines, type) {
     <span class="notif-close" id="notif-close-btn" title="Dismiss">✕</span>`;
   el.hidden = false;
   document.getElementById('notif-close-btn').onclick = () => { el.hidden = true; };
-}
-
-/* ============================================================
-   FILE LOADING
-   ============================================================ */
-function handleFile(file) {
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const { problems, warnings, errors, filename } = loadProblems(e.target.result, file.name);
-    if (errors.length > 0) {
-      showNotification(errors, 'error');
-      return;
-    }
-    state.problems = problems;
-    state.filename = filename;
-    state.columnAnswers = buildColumnAnswers(problems);
-    resetGame();
-    const hasWarning = warnings.some(w => w.startsWith('⚠'));
-    showNotification(warnings, hasWarning ? 'warning' : 'success');
-    renderSettings(); // refresh file info in settings panel if open
-    render();
-    // set beforeunload guard
-    updateBeforeUnload();
-  };
-  reader.readAsText(file);
 }
 
 /* ============================================================
@@ -1463,6 +2366,12 @@ document.addEventListener('keydown', e => {
       state.settings.showBoard = !state.settings.showBoard;
       saveSettings(); render();
       break;
+    case 'k': case 'K':
+      e.preventDefault();
+      state.settings.boardMode = state.settings.boardMode === 'grid' ? 'recent' : 'grid';
+      _lastRenderedIndex = -1;
+      saveSettings(); render();
+      break;
     case 'f': case 'F':
       e.preventDefault();
       toggleFullscreen();
@@ -1516,10 +2425,71 @@ function wireEvents() {
     });
   });
 
-  document.getElementById('file-input').onchange = e => {
-    handleFile(e.target.files[0]);
-    e.target.value = ''; // reset so same file can be re-loaded
+  document.getElementById('btn-back-home').onclick = () => { stopTimer(); showView('home'); };
+  document.getElementById('btn-close-csv-help').onclick = () => closeOverlay('csv-help-overlay');
+
+  // Homepage: upload nav
+  document.getElementById('hp-upload-nav-btn').onclick = () => showView('upload');
+
+  // Upload view buttons
+  document.getElementById('uv-back-btn').onclick = () => showView('home');
+  document.getElementById('uv-upload-btn').onclick = () => document.getElementById('file-input').click();
+  document.getElementById('uv-help-btn').onclick = () => openOverlay('csv-help-overlay');
+  document.getElementById('uv-template-btn').onclick = () => downloadTemplate();
+
+  // Print view
+  document.getElementById('pv-back-btn').onclick = () => showView('home');
+  document.getElementById('pv-host-btn').onclick = () => {
+    resetGame(); showView('caller'); computeProblemFontSize(); render();
   };
+  document.getElementById('pv-download-btn').onclick = () => pvDownloadCards();
+
+  // Style card picker
+  document.getElementById('pv-style-picker').addEventListener('click', e => {
+    const card = e.target.closest('.pv-style-card');
+    if (!card) return;
+    document.querySelectorAll('.pv-style-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+  });
+
+  // Color/BW toggle
+  document.getElementById('pv-options').addEventListener('click', e => {
+    const btn = e.target.closest('[data-pv-color]');
+    if (!btn) return;
+    document.querySelectorAll('[data-pv-color]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  document.getElementById('file-input').onchange = e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      if (_fileInputContext === 'settings') {
+        _fileInputContext = 'upload';
+        loadSetAndPlay(ev.target.result, file.name);
+      } else {
+        _fileInputContext = 'upload';
+        const name = file.name.replace(/\.csv$/i, '').replace(/[-_]/g, ' ');
+        const { problems, warnings, errors } = loadProblems(ev.target.result, file.name);
+        if (errors.length) {
+          const el = document.getElementById('uv-upload-error');
+          if (el) { el.textContent = errors.join(' · '); el.hidden = false; }
+          return;
+        }
+        applyLoadedSet(problems, name, warnings);
+        showView('print');
+        renderPrintView();
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeDebounceTimer);
+    _resizeDebounceTimer = setTimeout(computeProblemFontSize, 150);
+  });
 }
 
 /* ============================================================
@@ -1527,14 +2497,8 @@ function wireEvents() {
    ============================================================ */
 function init() {
   wireEvents();
-
-  // Load default problems
-  const { problems, warnings, filename } = loadProblems(DEFAULT_CSV, 'default-problems.csv');
-  state.problems = problems;
-  state.filename = filename;
-  state.columnAnswers = buildColumnAnswers(problems);
-  initGame();
-  render();
+  renderHomepage();
+  showView('home');
 }
 
 init();
