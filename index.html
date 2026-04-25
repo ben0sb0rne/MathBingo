@@ -32,9 +32,9 @@
   --col-O-light: #ffebee;
   --radius: 10px;
   --shadow: 0 2px 8px rgba(0,0,0,.12);
-  --topbar-h: 52px;
-  --bottomnav-h: 64px;
-  --font-scale: 1;
+  --topbar-h: clamp(52px, 3.2vmin, 88px);
+  --bottomnav-h: clamp(64px, 4.2vmin, 112px);
+  --rbs: 1;
 }
 [data-theme="dark"] {
   --bg: #121212;
@@ -131,7 +131,7 @@ body {
   background: var(--surface);
   display: flex;
   flex-direction: column;
-  max-height: 200px;
+  max-height: clamp(200px, 13vmin, 420px);
   overflow-y: auto;
 }
 #board-panel.hidden { display: none; }
@@ -201,11 +201,11 @@ body {
   display: flex;
   flex-direction: row;
   overflow: hidden;
-  height: 90px;
+  height: calc(90px * var(--rbs));
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 8px 16px;
+  gap: calc(10px * var(--rbs));
+  padding: calc(8px * var(--rbs)) calc(16px * var(--rbs));
   flex-shrink: 0;
 }
 .recent-ball-card {
@@ -213,18 +213,18 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: calc(4px * var(--rbs));
   flex-shrink: 0;
-  width: 80px;
+  width: calc(80px * var(--rbs));
 }
 .recent-ball-circle {
-  width: 52px;
-  height: 52px;
+  width: calc(52px * var(--rbs));
+  height: calc(52px * var(--rbs));
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.6rem;
+  font-size: calc(1.6rem * var(--rbs));
   font-weight: 900;
   color: #fff;
   letter-spacing: -0.02em;
@@ -237,21 +237,21 @@ body {
 .recent-ball-circle[data-col="G"] { background: var(--col-G); }
 .recent-ball-circle[data-col="O"] { background: var(--col-O); }
 .recent-ball-label {
-  font-size: 0.72rem;
+  font-size: calc(0.72rem * var(--rbs));
   text-align: center;
   color: var(--text-muted);
-  max-width: 80px;
+  max-width: calc(80px * var(--rbs));
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 @keyframes ball-enter {
-  0%   { transform: translateX(-80px) scale(0.72); opacity: 0; }
+  0%   { transform: translateX(calc(-80px * var(--rbs))) scale(0.72); opacity: 0; }
   60%  { opacity: 1; }
-  100% { transform: translateX(0)     scale(1);    opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
 }
 @keyframes ball-exit {
-  0%   { opacity: 1; max-width: 90px; transform: scale(1); }
+  0%   { opacity: 1; max-width: calc(90px * var(--rbs)); transform: scale(1); }
   35%  { opacity: 0; transform: scale(0.8); }
   100% { opacity: 0; max-width: 0px; padding: 0; transform: scale(0.8); }
 }
@@ -295,7 +295,7 @@ body {
   align-items: center;
   gap: 16px;
   width: 100%;
-  max-width: 700px;
+  max-width: clamp(700px, 70vw, 1400px);
   position: relative;
 }
 #replay-badge {
@@ -313,10 +313,10 @@ body {
   text-transform: uppercase;
 }
 #col-chip {
-  font-size: 3.5rem;
+  width: clamp(72px, 5.5vmin, 160px);
+  height: clamp(72px, 5.5vmin, 160px);
+  font-size: calc(clamp(72px, 5.5vmin, 160px) * 0.46);
   font-weight: 900;
-  width: 96px;
-  height: 96px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -334,7 +334,7 @@ body {
 #col-chip.hidden { display: none; }
 
 #problem-text {
-  font-size: calc(var(--problem-font-size, 4rem) * var(--font-scale));
+  font-size: var(--problem-font-size, 4rem);
   font-weight: 700;
   text-align: center;
   line-height: 1.1;
@@ -351,7 +351,7 @@ body {
   justify-content: center;
 }
 #answer-value {
-  font-size: calc(4.5rem * var(--font-scale));
+  font-size: clamp(2rem, calc(var(--problem-font-size, 3rem) * 0.8), 8rem);
   font-weight: 800;
   text-align: center;
   letter-spacing: -.02em;
@@ -589,12 +589,6 @@ kbd {
 .confirm-buttons button { padding: 8px 18px; border-radius: 6px; font-size: .9rem; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); }
 .confirm-buttons button:hover { background: var(--border); }
 
-/* ── Font scale variants ── */
-[data-fontsize="small"]  { --font-scale: 0.65; }
-[data-fontsize="medium"] { --font-scale: 0.80; }
-[data-fontsize="large"]  { --font-scale: 1.00; }
-[data-fontsize="xlarge"] { --font-scale: 1.15; }
-
 /* ── Utility ── */
 [hidden] { display: none !important; }
 
@@ -623,23 +617,6 @@ kbd {
 }
 #hp-header p { color: var(--text-muted); font-size: 1.05rem; }
 
-#hp-upload-section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 24px 22px;
-  margin-bottom: 36px;
-  box-shadow: var(--shadow);
-}
-#hp-upload-section h2,
-#hp-sets-section h2 {
-  font-size: .8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  color: var(--text-muted);
-  margin-bottom: 14px;
-}
 .hp-upload-row { display: flex; gap: 10px; flex-wrap: wrap; }
 .hp-btn {
   padding: 10px 20px;
@@ -669,77 +646,92 @@ kbd {
 }
 [data-theme="dark"] #hp-upload-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
 
-.hp-grade { margin-bottom: 30px; }
-.hp-grade-header {
-  font-size: 1.05rem;
+/* ── Homepage tile grid ── */
+#hp-tiles {
+  columns: 2 320px;
+  column-gap: 18px;
+  margin-top: 4px;
+}
+.hp-tile {
+  break-inside: avoid;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+}
+.hp-tile-upload {
+  border-style: dashed;
+  border-width: 2px;
+}
+.hp-tile-header {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+.hp-grade-title {
+  font-size: .98rem;
   font-weight: 800;
   color: var(--text);
   margin-bottom: 10px;
-  padding-bottom: 7px;
-  border-bottom: 2px solid var(--border);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
-.hp-course {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.hp-course-name {
-  font-size: .87rem;
-  font-weight: 600;
+.hp-course-row { margin-bottom: 10px; }
+.hp-course-row:last-child { margin-bottom: 0; }
+.hp-course-label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
   color: var(--text-muted);
-  min-width: 190px;
-  flex-shrink: 0;
-  padding-top: 8px;
+  margin-bottom: 3px;
 }
-.hp-course-sets { flex: 1; }
+.hp-set-link {
+  display: inline-block;
+  font-size: .88rem;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 2px 0;
+  text-align: left;
+  line-height: 1.4;
+}
+.hp-set-link:hover { text-decoration: underline; }
+.hp-set-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 2px; }
 .hp-coming-soon { font-size: .82rem; color: var(--text-muted); font-style: italic; }
-.hp-set-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 0; gap: 8px;
+#hp-upload-error {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #ffebee;
+  color: #b71c1c;
+  border-radius: 6px;
+  font-size: .88rem;
+  border: 1px solid #ef9a9a;
+  line-height: 1.5;
 }
-.hp-set-name { font-size: .87rem; font-weight: 600; }
-.hp-set-actions { display: flex; gap: 6px; flex-shrink: 0; }
-.hp-set-btn {
-  padding: 4px 12px; font-size: .82rem; font-weight: 600;
-  border-radius: 6px; border: 1px solid var(--border);
-  cursor: pointer; background: var(--surface2); color: var(--text);
-  transition: background .15s; white-space: nowrap;
-}
-.hp-set-btn:hover { background: var(--border); }
-.hp-set-btn.hp-set-host { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
-.hp-set-btn.hp-set-host:hover { opacity: .88; }
-.hp-set-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+[data-theme="dark"] #hp-upload-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
 
 /* Back button — only shown in caller view */
 #btn-back-home { margin-right: 4px; }
 
-/* ── Upload view ── */
-#upload-view {
-  width: 100%; min-height: 100vh; overflow-y: auto;
-  background: var(--bg); display: flex; justify-content: center;
+/* ── Fullscreen button ── */
+#btn-fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  opacity: .6;
+  transition: opacity .15s;
 }
-#uv-header {
-  margin-bottom: 28px;
-}
-#uv-header h1 { font-size: 1.7rem; font-weight: 800; margin-bottom: 6px; }
-#uv-header p { color: var(--text-muted); font-size: 1.05rem; margin-bottom: 0; }
-#uv-back-btn { margin-bottom: 20px; }
-#uv-body {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px 24px 22px;
-  box-shadow: var(--shadow);
-}
-#uv-upload-error {
-  margin-top: 12px; padding: 8px 12px;
-  background: #ffebee; color: #b71c1c;
-  border-radius: 6px; font-size: .88rem;
-  border: 1px solid #ef9a9a; line-height: 1.5;
-}
-[data-theme="dark"] #uv-upload-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
-
+#btn-fullscreen:hover { opacity: 1; }
+#btn-fullscreen svg { display: block; }
 
 #hp-set-error {
   margin-top: 12px; padding: 8px 12px;
@@ -748,6 +740,57 @@ kbd {
   border: 1px solid #ef9a9a; line-height: 1.5;
 }
 [data-theme="dark"] #hp-set-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+/* ── Advanced Options dropdown ── */
+#pv-advanced { border: none; }
+#pv-advanced > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+#pv-advanced > summary::-webkit-details-marker { display: none; }
+#pv-advanced > summary::after {
+  content: '▸';
+  font-size: .7rem;
+  color: var(--text-muted);
+  transition: transform .15s;
+}
+#pv-advanced[open] > summary::after { transform: rotate(90deg); }
+.pv-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 12px;
+}
+.pv-adv-sublabel {
+  display: block;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* ── Color pickers ── */
+#pv-color-pickers { display: flex; flex-direction: column; gap: 7px; }
+.pv-color-row { display: flex; align-items: center; gap: 8px; }
+.pv-color-col-label {
+  width: 24px; height: 24px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .82rem; color: #fff; flex-shrink: 0;
+}
+.pv-color-input {
+  width: 36px; height: 28px; padding: 1px 2px;
+  border: 1px solid var(--border); border-radius: 5px;
+  cursor: pointer; background: var(--surface2);
+}
+.pv-color-reset {
+  font-size: .8rem; padding: 3px 7px;
+  opacity: .7;
+}
+.pv-color-reset:hover { opacity: 1; }
 
 /* ── Print view shell ── */
 #print-view {
@@ -859,37 +902,9 @@ kbd {
       <p>Pick a set to play, or upload your own.</p>
     </div>
 
-    <div id="hp-upload-section">
-      <button class="hp-btn" id="hp-upload-nav-btn">📂 Upload Your Own</button>
-    </div>
+    <div id="hp-tiles"><!-- rendered by renderHomepage() --></div>
+    <div id="hp-set-error" hidden></div>
 
-    <div id="hp-sets-section">
-      <h2>Browse Sets</h2>
-      <div id="hp-grades"><!-- rendered by renderHomepage() --></div>
-      <div id="hp-set-error" hidden></div>
-    </div>
-
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════
-     UPLOAD VIEW
-     ═══════════════════════════════════════════════════ -->
-<div id="upload-view" hidden>
-  <div class="hp-inner">
-    <div id="uv-header">
-      <button class="icon-btn" id="uv-back-btn">← Back</button>
-      <h1>Upload Your Own CSV</h1>
-      <p>Create a custom set from any spreadsheet.</p>
-    </div>
-    <div id="uv-body">
-      <div class="hp-upload-row">
-        <button class="hp-btn primary" id="uv-upload-btn">📂 Choose File</button>
-        <button class="hp-btn" id="uv-help-btn">Format Help</button>
-        <button class="hp-btn" id="uv-template-btn">Download Template</button>
-      </div>
-      <div id="uv-upload-error" hidden></div>
-    </div>
   </div>
 </div>
 
@@ -900,7 +915,7 @@ kbd {
   <div id="pv-topbar">
     <button class="icon-btn" id="pv-back-btn">← Back</button>
     <span id="pv-title"></span>
-    <button class="hp-btn primary" id="pv-host-btn">▶ Host Game</button>
+    <button class="hp-btn primary" id="pv-host-btn">Host Game ▶</button>
   </div>
   <div id="pv-body">
     <!-- Left: options + download -->
@@ -933,13 +948,56 @@ kbd {
           </label>
         </div>
       </div>
-      <div class="pv-opt-group">
-        <label class="pv-opt-label">Card label</label>
-        <div class="settings-row">
-          <label for="pv-show-numbers" style="font-size:.9rem;cursor:pointer">Show card number at bottom</label>
-          <input type="checkbox" id="pv-show-numbers" checked>
+      <div class="pv-opt-group" id="pv-colors-group">
+        <label class="pv-opt-label">Card Colors</label>
+        <div id="pv-color-pickers">
+          <div class="pv-color-row" data-col="B">
+            <span class="pv-color-col-label" style="background:#1565c0">B</span>
+            <input type="color" class="pv-color-input" id="pv-color-B" value="#1565c0">
+            <button class="pv-color-reset icon-btn" title="Reset to default">↩</button>
+          </div>
+          <div class="pv-color-row" data-col="I">
+            <span class="pv-color-col-label" style="background:#2e7d32">I</span>
+            <input type="color" class="pv-color-input" id="pv-color-I" value="#2e7d32">
+            <button class="pv-color-reset icon-btn" title="Reset to default">↩</button>
+          </div>
+          <div class="pv-color-row" data-col="N">
+            <span class="pv-color-col-label" style="background:#e65100">N</span>
+            <input type="color" class="pv-color-input" id="pv-color-N" value="#e65100">
+            <button class="pv-color-reset icon-btn" title="Reset to default">↩</button>
+          </div>
+          <div class="pv-color-row" data-col="G">
+            <span class="pv-color-col-label" style="background:#6a1b9a">G</span>
+            <input type="color" class="pv-color-input" id="pv-color-G" value="#6a1b9a">
+            <button class="pv-color-reset icon-btn" title="Reset to default">↩</button>
+          </div>
+          <div class="pv-color-row" data-col="O">
+            <span class="pv-color-col-label" style="background:#b71c1c">O</span>
+            <input type="color" class="pv-color-input" id="pv-color-O" value="#b71c1c">
+            <button class="pv-color-reset icon-btn" title="Reset to default">↩</button>
+          </div>
         </div>
       </div>
+      <details id="pv-advanced">
+        <summary class="pv-opt-label pv-advanced-summary">Advanced Options</summary>
+        <div class="pv-advanced-body">
+          <div>
+            <label class="pv-adv-sublabel">Card label</label>
+            <div class="settings-row">
+              <label for="pv-show-numbers" style="font-size:.9rem;cursor:pointer">Show card number at bottom</label>
+              <input type="checkbox" id="pv-show-numbers" checked>
+            </div>
+          </div>
+          <div>
+            <label class="pv-adv-sublabel">Work area style</label>
+            <div class="seg-group" id="pv-work-picker">
+              <button class="seg-btn active" data-pv-work="lined">Lined</button>
+              <button class="seg-btn" data-pv-work="grid">Grid</button>
+              <button class="seg-btn" data-pv-work="blank">Blank</button>
+            </div>
+          </div>
+        </div>
+      </details>
       <button class="hp-btn primary" id="pv-download-btn">⬇ Download Cards</button>
       <div id="pv-dl-error" hidden></div>
     </div>
@@ -965,6 +1023,11 @@ kbd {
     <div class="spacer"></div>
     <div class="topbar-right">
       <button class="icon-btn" id="btn-help">Help</button>
+      <button class="icon-btn" id="btn-fullscreen" title="Fullscreen (F)" aria-label="Enter fullscreen">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 5V1h4M9 1h4v4M1 9v4h4M13 9v4H9"/>
+        </svg>
+      </button>
     </div>
   </div>
 
@@ -1310,25 +1373,31 @@ function loadProblems(csvText, filename) {
 const SETTINGS_KEY = 'mathBingoSettings_v1';
 const DEFAULT_SETTINGS = {
   theme: 'light',
-  fontSize: 'large',
   showBoard: true,
   boardContent: 'problems',   // 'problems' | 'answers'
   showColumn: true,
   showNavButtons: true,
-  showProgress: false,        // show call count in topbar
-  showRecentBalls: true,      // show recently-called strip
+  showProgress: false,
+  showRecentBalls: true,
   autoAdvanceOn: false,
   autoAdvanceInterval: 20,
   boardMode: 'recent',  // 'grid' | 'recent'
   recentCount: 5,       // 1–10
+  recentBallScale: 1.0, // 0.5–2.5
+  cardColors: { B: '#1565c0', I: '#2e7d32', N: '#e65100', G: '#6a1b9a', O: '#b71c1c' },
 };
 
 function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(raw));
+    if (raw) {
+      const saved = JSON.parse(raw);
+      const merged = Object.assign({}, DEFAULT_SETTINGS, saved);
+      merged.cardColors = Object.assign({}, DEFAULT_SETTINGS.cardColors, saved.cardColors || {});
+      return merged;
+    }
   } catch(e) {}
-  return Object.assign({}, DEFAULT_SETTINGS);
+  return Object.assign({}, DEFAULT_SETTINGS, { cardColors: { ...DEFAULT_SETTINGS.cardColors } });
 }
 
 function saveSettings() {
@@ -1447,7 +1516,6 @@ function resetGame() {
 function showView(view) {
   state.currentView = view;
   document.getElementById('homepage-view').hidden = (view !== 'home');
-  document.getElementById('upload-view').hidden   = (view !== 'upload');
   document.getElementById('print-view').hidden    = (view !== 'print');
   document.getElementById('app').hidden            = (view !== 'caller');
   document.getElementById('btn-back-home').hidden  = (view !== 'caller');
@@ -1525,48 +1593,62 @@ function loadSetAndPlay(csv, filename, errorElId = null) {
 }
 
 function renderHomepage() {
-  const container = document.getElementById('hp-grades');
-  container.innerHTML = BINGO_SETS.map(grade => {
+  const container = document.getElementById('hp-tiles');
+
+  const uploadTile = `
+    <div class="hp-tile hp-tile-upload">
+      <div class="hp-tile-header">Upload Your Own</div>
+      <div class="hp-upload-row">
+        <button class="hp-btn primary" id="hp-choose-file-btn">📂 Choose File</button>
+        <button class="hp-btn" id="hp-format-help-btn">Format Help</button>
+        <button class="hp-btn" id="hp-dl-template-btn">Download Template</button>
+      </div>
+      <div id="hp-upload-error" hidden></div>
+    </div>`;
+
+  const gradeTiles = BINGO_SETS.map(grade => {
     const courses = grade.courses.map(course => {
-      const sets = course.sets.length
+      const setsHtml = course.sets.length
         ? course.sets.map(set =>
-            `<div class="hp-set-row" data-grade="${escHtml(grade.grade)}" data-course="${escHtml(course.name)}" data-set="${escHtml(set.name)}">
-              <span class="hp-set-name">${escHtml(set.name)}</span>
-              <div class="hp-set-actions">
-                <button class="hp-set-btn hp-set-host">▶ Host</button>
-                <button class="hp-set-btn hp-set-print">🖨 Print Cards</button>
-              </div>
-            </div>`
+            `<button class="hp-set-link"
+               data-grade="${escHtml(grade.grade)}"
+               data-course="${escHtml(course.name)}"
+               data-set="${escHtml(set.name)}">${escHtml(set.name)}</button>`
           ).join('')
         : `<span class="hp-coming-soon">Coming soon</span>`;
-      return `<div class="hp-course">
-        <span class="hp-course-name">${escHtml(course.name)}</span>
-        <div class="hp-course-sets">${sets}</div>
+      return `<div class="hp-course-row">
+        <div class="hp-course-label">${escHtml(course.name)}</div>
+        ${setsHtml}
       </div>`;
     }).join('');
-    return `<div class="hp-grade">
-      <div class="hp-grade-header">${escHtml(grade.grade)}</div>
+    return `<div class="hp-tile">
+      <div class="hp-grade-title">${escHtml(grade.grade)}</div>
       ${courses}
     </div>`;
   }).join('');
 
-  // Wire Host + Print Cards button clicks via event delegation
+  container.innerHTML = uploadTile + gradeTiles;
+
+  // Wire upload tile buttons
+  document.getElementById('hp-choose-file-btn').onclick = () => document.getElementById('file-input').click();
+  document.getElementById('hp-format-help-btn').onclick = () => openOverlay('csv-help-overlay');
+  document.getElementById('hp-dl-template-btn').onclick = () => downloadTemplate();
+
+  // Wire set name clicks via event delegation
   container.addEventListener('click', e => {
-    const hostBtn  = e.target.closest('.hp-set-host');
-    const printBtn = e.target.closest('.hp-set-print');
-    if (!hostBtn && !printBtn) return;
-    const row = (hostBtn || printBtn).closest('.hp-set-row');
-    const { grade: gradeName, course: courseName, set: setName } = row.dataset;
+    const btn = e.target.closest('.hp-set-link');
+    if (!btn) return;
+    const { grade: gradeName, course: courseName, set: setName } = btn.dataset;
     const set = findSet(gradeName, courseName, setName);
     if (!set) return;
     document.getElementById('hp-set-error').hidden = true;
-    const label = `${gradeName} \u2014 ${courseName} \u2014 ${setName}`;
-    fetchAndLoadSet(set, label, hostBtn ? 'host' : 'print');
+    const label = `${gradeName} — ${courseName} — ${setName}`;
+    fetchAndLoadSet(set, label, 'print');
   });
 }
-
 function renderPrintView() {
   document.getElementById('pv-title').textContent = state.setName || 'Print Cards';
+  applyCardColors();
 
   const cols = ['B','I','N','G','O'];
   const byCol = {};
@@ -1579,7 +1661,7 @@ function renderPrintView() {
       const colCell = i === 0
         ? `<td rowspan="${byCol[col].length}" style="background:${bg};color:#fff;font-weight:800;text-align:center;width:32px;">${col}</td>`
         : '';
-      return `<tr>${colCell}<td>${escHtml(p.problem)}</td><td style="color:var(--text-muted)">${escHtml(String(p.answer))}</td></tr>`;
+      return `<tr>${colCell}<td class="pv-problem-cell" data-problem="${escHtml(p.problem)}"></td><td style="color:var(--text-muted)">${escHtml(String(p.answer))}</td></tr>`;
     })
   ).join('');
 
@@ -1592,6 +1674,10 @@ function renderPrintView() {
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>`;
+
+  document.querySelectorAll('#pv-problems-table .pv-problem-cell').forEach(cell => {
+    renderMath(cell, cell.dataset.problem);
+  });
 }
 
 function downloadTemplate() {
@@ -1691,8 +1777,10 @@ function computeProblemFontSize() {
     (best, p) => p.problem.length > best.length ? p.problem : best, ''
   );
 
-  // #problem-card has max-width:700px; cap there and leave padding margin
-  const availW = Math.min(problemArea.offsetWidth - 40, 660);
+  // Mirror CSS: #problem-card { max-width: clamp(700px, 70vw, 1400px) }
+  // Card may be hidden (offsetWidth=0) when this runs before render(), so compute directly.
+  const cardMaxW = Math.min(Math.max(700, window.innerWidth * 0.7), 1400);
+  const availW = Math.min(problemArea.offsetWidth - 40, cardMaxW - 40);
   const availH = problemArea.offsetHeight * 0.42;
   if (availW <= 0 || availH <= 0) return;
 
@@ -1706,7 +1794,7 @@ function computeProblemFontSize() {
   }
   document.body.appendChild(probe);
 
-  let lo = 16, hi = 400, best = lo;
+  let lo = 16, hi = 800, best = lo;
   for (let i = 0; i < 20; i++) {
     const mid = Math.floor((lo + hi) / 2);
     probe.style.fontSize = mid + 'px';
@@ -1723,7 +1811,20 @@ function computeProblemFontSize() {
 /* ============================================================
    FORMAT HELPERS
    ============================================================ */
-const COL_COLORS = { B: '#1565c0', I: '#2e7d32', N: '#e65100', G: '#6a1b9a', O: '#b71c1c' };
+const DEFAULT_COL_COLORS = { B: '#1565c0', I: '#2e7d32', N: '#e65100', G: '#6a1b9a', O: '#b71c1c' };
+let COL_COLORS = { ...DEFAULT_COL_COLORS };
+
+function applyCardColors() {
+  const colors = state.settings.cardColors;
+  Object.assign(COL_COLORS, colors);
+  ['B','I','N','G','O'].forEach(col => {
+    document.documentElement.style.setProperty(`--col-${col}`, colors[col]);
+    const input = document.getElementById(`pv-color-${col}`);
+    if (input) input.value = colors[col];
+    const badge = document.querySelector(`.pv-color-row[data-col="${col}"] .pv-color-col-label`);
+    if (badge) badge.style.background = colors[col];
+  });
+}
 
 function formatAnswer(answer) {
   // Format as integer if whole, otherwise as decimal
@@ -1749,7 +1850,7 @@ function render() {
 function applySettings() {
   const s = state.settings;
   document.documentElement.setAttribute('data-theme', s.theme);
-  document.documentElement.setAttribute('data-fontsize', s.fontSize);
+  document.documentElement.style.setProperty('--rbs', s.recentBallScale ?? 1.0);
   document.getElementById('bottom-nav').hidden = !s.showNavButtons;
   const isRecent = s.boardMode === 'recent';
   const panelVisible = isRecent ? (s.showBoard && s.showRecentBalls) : s.showBoard;
@@ -2035,21 +2136,20 @@ function renderSettings() {
           <button class="icon-btn" id="s-recent-inc">+</button>
         </div>
       </div>
+      <div class="settings-row" id="s-rbs-row"${s.boardMode==='recent'?'':' hidden'}>
+        <label for="s-rbs-slider">Recent numbers size</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="range" id="s-rbs-slider" min="0.5" max="2.5" step="0.1"
+            value="${s.recentBallScale ?? 1}" style="width:90px;accent-color:var(--primary)">
+          <span id="s-rbs-val" style="min-width:34px;text-align:right;font-weight:700;">${Math.round((s.recentBallScale ?? 1) * 100)}%</span>
+        </div>
+      </div>
       <div class="settings-row">
         <label>Board shows</label>
         <div class="seg-group">
           <button class="seg-btn${s.boardContent==='problems'?' active':''}" data-board-content="problems">Problems</button>
           <button class="seg-btn${s.boardContent==='answers'?' active':''}" data-board-content="answers">Answers</button>
         </div>
-      </div>
-    </div>
-
-    <div class="settings-section">
-      <span class="settings-label">Font Size</span>
-      <div class="seg-group">
-        ${['small','medium','large','xlarge'].map(sz =>
-          `<button class="seg-btn${s.fontSize===sz?' active':''}" data-fontsize="${sz}">${sz.charAt(0).toUpperCase()+sz.slice(1)}</button>`
-        ).join('')}
       </div>
     </div>
 
@@ -2143,12 +2243,15 @@ function renderSettings() {
       saveSettings(); renderSettings(); render();
     };
   });
-  sBody.querySelectorAll('[data-fontsize]').forEach(btn => {
-    btn.onclick = () => {
-      state.settings.fontSize = btn.dataset.fontsize;
-      saveSettings(); renderSettings(); render();
+  const rbsSlider = sBody.querySelector('#s-rbs-slider');
+  if (rbsSlider) {
+    rbsSlider.oninput = () => {
+      state.settings.recentBallScale = parseFloat(rbsSlider.value);
+      sBody.querySelector('#s-rbs-val').textContent = Math.round(state.settings.recentBallScale * 100) + '%';
+      applySettings();
+      saveSettings();
     };
-  });
+  }
   sBody.querySelectorAll('[data-theme-val]').forEach(btn => {
     btn.onclick = () => {
       state.settings.theme = btn.dataset.themeVal;
@@ -2189,6 +2292,7 @@ function pvDownloadCards() {
   const style    = document.querySelector('.pv-style-card.active')?.dataset.pvStyle || 'full';
   const color    = document.querySelector('[data-pv-color].active')?.dataset.pvColor !== 'bw';
   const showNums = document.getElementById('pv-show-numbers')?.checked ?? true;
+  const workType = document.querySelector('[data-pv-work].active')?.dataset.pvWork || 'lined';
   const errEl    = document.getElementById('pv-dl-error');
   errEl.hidden   = true;
 
@@ -2206,16 +2310,17 @@ function pvDownloadCards() {
   }
 
   const cards = generateBingoCards(n);
-  generateCardsPDF(cards, { style, color, showCardNumbers: showNums });
+  generateCardsPDF(cards, { style, color, showCardNumbers: showNums, workType });
 }
 
-const COL_RGB = {
-  B: [ 21, 101, 192],
-  I: [ 46, 125,  50],
-  N: [230,  81,   0],
-  G: [106,  27, 154],
-  O: [183,  28,  28],
-};
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function getColRgb(col) {
+  const hex = (state.settings.cardColors || DEFAULT_COL_COLORS)[col] || DEFAULT_COL_COLORS[col];
+  return hexToRgb(hex);
+}
 const BW_HEADER_RGB = [51, 51, 51];
 const FREE_FILL_RGB = [240, 230, 255];
 const FREE_TEXT_RGB = [100,  80, 140];
@@ -2239,7 +2344,7 @@ function drawBingoCard(doc, { x, y, cardW, card, cardIdx, headerH, showCardNumbe
   // Header row
   cols.forEach((col, ci) => {
     const cx = x + ci * cellW;
-    doc.setFillColor(...(color ? COL_RGB[col] : BW_HEADER_RGB));
+    doc.setFillColor(...(color ? getColRgb(col) : BW_HEADER_RGB));
     doc.rect(cx, y, cellW, headerH, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
@@ -2285,20 +2390,25 @@ function drawBingoCard(doc, { x, y, cardW, card, cardIdx, headerH, showCardNumbe
 }
 
 /**
- * Draw a blank "show your work" area — light ruled lines every 7mm,
- * matching the pattern used in the caller-view work-area CSS.
+ * Draw a "show your work" area. workType: 'lined' | 'grid' | 'blank'
  */
-function drawWorkArea(doc, { x, y, w, h }) {
+function drawWorkArea(doc, { x, y, w, h, workType = 'lined' }) {
+  if (workType === 'blank') return;
   doc.setDrawColor(210, 210, 210);
   doc.setLineWidth(0.2);
   const spacing = 7;
   for (let ly = y + spacing; ly <= y + h; ly += spacing) {
     doc.line(x, ly, x + w, ly);
   }
+  if (workType === 'grid') {
+    for (let lx = x + spacing; lx <= x + w; lx += spacing) {
+      doc.line(lx, y, lx, y + h);
+    }
+  }
 }
 
 function generateCardsPDF(cards, opts) {
-  const { style = 'full', color = true, showCardNumbers = true } = opts;
+  const { style = 'full', color = true, showCardNumbers = true, workType = 'lined' } = opts;
   const { jsPDF } = jspdf;
 
   if (style === 'full') {
@@ -2341,7 +2451,7 @@ function generateCardsPDF(cards, opts) {
     cards.forEach((card, idx) => {
       if (idx > 0) doc.addPage();
       drawBingoCard(doc, { x: margin, y: yStart, cardW, card, cardIdx: idx, headerH, showCardNumbers, color });
-      drawWorkArea(doc, { x: workX, y: yStart, w: cardW, h: workH });
+      drawWorkArea(doc, { x: workX, y: yStart, w: cardW, h: workH, workType });
     });
   }
 
@@ -2470,6 +2580,18 @@ document.addEventListener('keydown', e => {
 /* ============================================================
    FULLSCREEN
    ============================================================ */
+const FS_ENTER_SVG = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5V1h4M9 1h4v4M1 9v4h4M13 9v4H9"/></svg>`;
+const FS_EXIT_SVG  = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1v4H1M13 5H9V1M5 13V9H1M9 9h4v4"/></svg>`;
+
+function updateFullscreenBtn() {
+  const btn = document.getElementById('btn-fullscreen');
+  if (!btn) return;
+  const inFs = !!document.fullscreenElement;
+  btn.innerHTML = inFs ? FS_EXIT_SVG : FS_ENTER_SVG;
+  btn.setAttribute('aria-label', inFs ? 'Exit fullscreen' : 'Enter fullscreen');
+  btn.title = inFs ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+}
+
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
@@ -2477,6 +2599,8 @@ function toggleFullscreen() {
     document.exitFullscreen().catch(() => {});
   }
 }
+
+document.addEventListener('fullscreenchange', updateFullscreenBtn);
 
 /* ============================================================
    EVENT WIRING
@@ -2512,15 +2636,8 @@ function wireEvents() {
 
   document.getElementById('btn-back-home').onclick = () => { stopTimer(); showView('home'); };
   document.getElementById('btn-close-csv-help').onclick = () => closeOverlay('csv-help-overlay');
+  document.getElementById('btn-fullscreen').onclick = () => toggleFullscreen();
 
-  // Homepage: upload nav
-  document.getElementById('hp-upload-nav-btn').onclick = () => showView('upload');
-
-  // Upload view buttons
-  document.getElementById('uv-back-btn').onclick = () => showView('home');
-  document.getElementById('uv-upload-btn').onclick = () => document.getElementById('file-input').click();
-  document.getElementById('uv-help-btn').onclick = () => openOverlay('csv-help-overlay');
-  document.getElementById('uv-template-btn').onclick = () => downloadTemplate();
 
   // Print view
   document.getElementById('pv-back-btn').onclick = () => showView('home');
@@ -2545,6 +2662,33 @@ function wireEvents() {
     btn.classList.add('active');
   });
 
+  // Work area style picker
+  document.getElementById('pv-work-picker').addEventListener('click', e => {
+    const btn = e.target.closest('[data-pv-work]');
+    if (!btn) return;
+    document.querySelectorAll('[data-pv-work]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  // Column color pickers
+  document.getElementById('pv-color-pickers').addEventListener('input', e => {
+    const input = e.target.closest('.pv-color-input');
+    if (!input) return;
+    const col = input.closest('.pv-color-row').dataset.col;
+    state.settings.cardColors[col] = input.value;
+    applyCardColors();
+    saveSettings();
+  });
+
+  document.getElementById('pv-color-pickers').addEventListener('click', e => {
+    const btn = e.target.closest('.pv-color-reset');
+    if (!btn) return;
+    const col = btn.closest('.pv-color-row').dataset.col;
+    state.settings.cardColors[col] = DEFAULT_COL_COLORS[col];
+    applyCardColors();
+    saveSettings();
+  });
+
   document.getElementById('file-input').onchange = e => {
     const file = e.target.files[0];
     e.target.value = '';
@@ -2559,7 +2703,7 @@ function wireEvents() {
         const name = file.name.replace(/\.csv$/i, '').replace(/[-_]/g, ' ');
         const { problems, warnings, errors } = loadProblems(ev.target.result, file.name);
         if (errors.length) {
-          const el = document.getElementById('uv-upload-error');
+          const el = document.getElementById('hp-upload-error');
           if (el) { el.textContent = errors.join(' · '); el.hidden = false; }
           return;
         }
@@ -2582,6 +2726,7 @@ function wireEvents() {
    ============================================================ */
 function init() {
   wireEvents();
+  applyCardColors();
   renderHomepage();
   showView('home');
 }
