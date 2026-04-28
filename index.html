@@ -918,34 +918,109 @@ kbd {
 .hp-set-card {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 4px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
-  transition: border-color .15s, background .15s, transform .1s;
+  transition: border-color .15s, background .15s, transform .1s, box-shadow .15s;
+  user-select: none;
 }
 .hp-set-card:hover {
   border-color: var(--primary);
   background: var(--col-B-light);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
 }
-.hp-set-card:active { transform: translateY(1px); }
+.hp-set-card:active { transform: translateY(0); }
 .hp-set-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.hp-set-card.expanded { border-color: var(--primary); background: var(--col-B-light); }
+.hp-set-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .hp-set-name {
-  font-size: .92rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   color: var(--text);
-  line-height: 1.35;
+  line-height: 1.3;
+}
+.hp-set-long {
+  font-size: .82rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 .hp-set-std {
-  font-size: .72rem;
+  font-size: .7rem;
   font-weight: 600;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+  opacity: .7;
+  margin-top: 2px;
 }
+.hp-card-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform .15s ease;
+}
+.hp-set-card[aria-expanded="true"] .hp-card-chevron {
+  transform: rotate(90deg);
+}
+
+/* Variant list (inline expanded) */
+.hp-variant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.hp-variant-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .88rem;
+  text-align: left;
+  color: var(--text);
+  transition: background .15s, border-color .15s;
+}
+.hp-variant-btn:hover { background: var(--surface2); border-color: var(--primary); }
+.hp-variant-btn.recommended {
+  background: var(--col-B-light);
+  border-color: var(--primary);
+  font-weight: 600;
+}
+.hp-variant-label { flex: 1; }
+.hp-variant-tag {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--primary);
+  padding: 2px 6px;
+  background: rgba(33, 150, 243, .1);
+  border-radius: 3px;
+}
+
+/* Two-tier chip rows */
+.hp-grade-row {
+  margin-top: -8px;
+  margin-bottom: 16px;
+  padding-left: 16px;
+  border-left: 2px solid var(--primary);
+}
+.hp-grade-row[hidden] { display: none; }
 
 /* Tags ★ and [calc] — used in cards and roadmap */
 .hp-tag {
@@ -1020,9 +1095,9 @@ kbd {
 .rm-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
-  align-items: center;
+  align-items: start;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-radius: 6px;
   background: var(--surface2);
   font-size: .9rem;
@@ -1031,12 +1106,22 @@ kbd {
   background: var(--col-B-light);
   border-left: 3px solid var(--primary);
 }
-.rm-name { color: var(--text); line-height: 1.35; }
+.rm-name-col { display: flex; flex-direction: column; gap: 2px; }
+.rm-name { color: var(--text); line-height: 1.3; font-weight: 700; }
+.rm-long { font-size: .8rem; color: var(--text-muted); line-height: 1.35; }
+.rm-variants {
+  font-size: .75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.rm-variant-ready { color: var(--primary); font-weight: 600; }
 .rm-std {
   font-size: .75rem;
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  align-self: center;
 }
 .rm-status {
   font-size: .7rem;
@@ -1046,6 +1131,7 @@ kbd {
   padding: 2px 8px;
   border-radius: 3px;
   white-space: nowrap;
+  align-self: center;
 }
 .rm-ready { background: #c8e6c9; color: #2e7d32; }
 [data-theme="dark"] .rm-ready { background: #1b3d1f; color: #81c784; }
@@ -1714,9 +1800,12 @@ O,20 + (-3),17</pre>
 /* ============================================================
    PRE-BUILT BINGO SETS  (add set objects as { name, path } to fill in later)
    ============================================================ */
-/* Master topic list. Each entry:
-   { gk: gradeKey, g: gradeLabel, n: name, s: standard, f?: fluency★, c?: [calc], path?: csvPath }
-   `path` present ⇒ topic is playable today; absent ⇒ on the roadmap. */
+/* Topic catalog.
+   Each TOPIC_GROUPS entry:
+     { id, short, long, grades:{gradeKey:standard}, fluency?:{gradeKey:true},
+       calc?:bool, variants:[{label, path?, recommended?, calc?}] }
+   A topic is "playable" if any variant has `path`. A group can appear in
+   multiple grades; the displayed standard changes per active grade filter. */
 const GRADE_ORDER = ['K','1','2','3','4','5','6','7','8','Pre-Algebra','Algebra I','Geometry','Algebra II','Pre-Calculus','Calculus','Statistics'];
 const GRADE_LABELS = {
   'K': 'Kindergarten', '1': 'Grade 1', '2': 'Grade 2', '3': 'Grade 3', '4': 'Grade 4',
@@ -1730,155 +1819,302 @@ const GRADE_CHIP_LABELS = {
   'Pre-Algebra': 'Pre-A', 'Algebra I': 'Alg I', 'Geometry': 'Geo',
   'Algebra II': 'Alg II', 'Pre-Calculus': 'Pre-C', 'Calculus': 'Calc', 'Statistics': 'Stats',
 };
-const TOPICS = [
-  // Kindergarten
-  { gk:'K', n:'Addition within 10', s:'K.OA.5', f:1 },
-  { gk:'K', n:'Subtraction within 10', s:'K.OA.5', f:1 },
-  { gk:'K', n:'Decomposing teen numbers', s:'K.NBT.1' },
-  { gk:'K', n:'One more / one less', s:'K.CC.4c' },
-  // Grade 1
-  { gk:'1', n:'Addition within 20 — Level A: sums to 10', s:'1.OA.6', f:1 },
-  { gk:'1', n:'Addition within 20 — Level B: sums 11–20', s:'1.OA.6', f:1 },
-  { gk:'1', n:'Subtraction within 20 — Level A: minuends to 10', s:'1.OA.6', f:1 },
-  { gk:'1', n:'Subtraction within 20 — Level B: minuends 11–20', s:'1.OA.6', f:1 },
-  { gk:'1', n:'10 more / 10 less mentally', s:'1.NBT.5' },
-  { gk:'1', n:'Two-digit plus one-digit', s:'1.NBT.4' },
-  { gk:'1', n:'Missing addend (e.g. 6 + ? = 13)', s:'1.OA.8' },
-  // Grade 2
-  { gk:'2', n:'Addition & subtraction — Level A: within 50', s:'2.NBT.5', f:1 },
-  { gk:'2', n:'Addition & subtraction — Level B: within 100', s:'2.NBT.5', f:1 },
-  { gk:'2', n:'Place value identification', s:'2.NBT.1' },
-  { gk:'2', n:'Money totals in cents', s:'2.MD.8' },
-  { gk:'2', n:'Skip counting fill-in', s:'2.NBT.2' },
-  // Grade 3
-  { gk:'3', n:'Multiplication facts within 100', s:'3.OA.7', f:1 },
-  { gk:'3', n:'Division facts within 100', s:'3.OA.7', f:1 },
-  { gk:'3', n:'Addition & subtraction within 1000', s:'3.NBT.2', f:1 },
-  { gk:'3', n:'Rounding to nearest 10 or 100', s:'3.NBT.1' },
-  { gk:'3', n:'Area of a rectangle', s:'3.MD.7' },
-  { gk:'3', n:'Perimeter given side lengths', s:'3.MD.8' },
-  { gk:'3', n:'Multiplying by multiples of 10', s:'3.NBT.3' },
-  { gk:'3', n:'Equivalent fractions, missing numerator', s:'3.NF.3b' },
-  // Grade 4
-  { gk:'4', n:'Multi-digit addition/subtraction', s:'4.NBT.4', f:1 },
-  { gk:'4', n:'Multi-digit multiplication — Level A: 2-digit × 1-digit', s:'4.NBT.5' },
-  { gk:'4', n:'Multi-digit multiplication — Level B: 2-digit × 2-digit', s:'4.NBT.5' },
-  { gk:'4', n:'Division with one-digit divisor', s:'4.NBT.6' },
-  { gk:'4', n:'Like-denominator fraction add/subtract', s:'4.NF.3' },
-  { gk:'4', n:'Fraction × whole number', s:'4.NF.4' },
-  { gk:'4', n:'Decimal-fraction conversion (tenths/hundredths)', s:'4.NF.6' },
-  { gk:'4', n:'Angle additivity', s:'4.MD.7' },
-  { gk:'4', n:'Unit conversion', s:'4.MD.1' },
-  // Grade 5
-  { gk:'5', n:'Decimal addition/subtraction', s:'5.NBT.7' },
-  { gk:'5', n:'Decimal multiplication (small numbers)', s:'5.NBT.7' },
-  { gk:'5', n:'Fraction × fraction', s:'5.NF.4' },
-  { gk:'5', n:'Fraction ÷ whole, whole ÷ unit fraction', s:'5.NF.7' },
-  { gk:'5', n:'Volume of rectangular prisms', s:'5.MD.5' },
-  { gk:'5', n:'Powers of 10', s:'5.NBT.2' },
-  { gk:'5', n:'Order of operations evaluation', s:'5.OA.1' },
-  // Grade 6
-  { gk:'6', n:'Dividing fractions by fractions', s:'6.NS.1' },
-  { gk:'6', n:'GCF and LCM (numbers ≤ 100)', s:'6.NS.4' },
-  { gk:'6', n:'Absolute value', s:'6.NS.7c' },
-  { gk:'6', n:'Unit rates', s:'6.RP.2' },
-  { gk:'6', n:'Percent of a quantity', s:'6.RP.3c' },
-  { gk:'6', n:'Evaluating expressions', s:'6.EE.2c' },
-  { gk:'6', n:'One-step equations', s:'6.EE.7' },
-  { gk:'6', n:'Area of triangles, parallelograms, trapezoids', s:'6.G.1' },
-  // Grade 7 — our existing 3 sets live here under Level A: integers
-  { gk:'7', n:'Adding/subtracting rational numbers — Level A: integers (addition only)', s:'7.NS.1', path:'sets/grade-6/integer-operations-addition.csv' },
-  { gk:'7', n:'Adding/subtracting rational numbers — Level A: integers (subtraction only)', s:'7.NS.1', path:'sets/grade-6/integer-operations-subtraction.csv' },
-  { gk:'7', n:'Adding/subtracting rational numbers — Level A: integers (mixed)', s:'7.NS.1', path:'sets/grade-6/integer-operations-addition-subtraction.csv' },
-  { gk:'7', n:'Adding/subtracting rational numbers — Level B: rationals', s:'7.NS.1' },
-  { gk:'7', n:'Multiplying/dividing rational numbers — Level A: integers', s:'7.NS.2' },
-  { gk:'7', n:'Multiplying/dividing rational numbers — Level B: rationals', s:'7.NS.2' },
-  { gk:'7', n:'Two-step equations', s:'7.EE.4a' },
-  { gk:'7', n:'Circle area and circumference (in terms of π)', s:'7.G.4' },
-  { gk:'7', n:'Simple probability', s:'7.SP.5' },
-  { gk:'7', n:'Angle relationships (complementary, supplementary, vertical)', s:'7.G.5' },
-  // Grade 8
-  { gk:'8', n:'Integer exponent rules', s:'8.EE.1' },
-  { gk:'8', n:'Square and cube roots — Level A: perfect squares to 225', s:'8.EE.2' },
-  { gk:'8', n:'Square and cube roots — Level B: perfect cubes to 1000', s:'8.EE.2' },
-  { gk:'8', n:'Scientific notation operations', s:'8.EE.4', c:1 },
-  { gk:'8', n:'Slope from two points', s:'8.EE.6' },
-  { gk:'8', n:'Linear equations with variables on both sides', s:'8.EE.7' },
-  { gk:'8', n:'Pythagorean theorem with integer triples', s:'8.G.7' },
-  { gk:'8', n:'Function evaluation', s:'8.F.1' },
-  // Pre-Algebra
-  { gk:'Pre-Algebra', n:'Multi-step equations with distribution', s:'8.EE.7b' },
-  { gk:'Pre-Algebra', n:'Solving proportions', s:'7.RP.2' },
-  { gk:'Pre-Algebra', n:'Slope or y-intercept from y = mx + b', s:'8.F.3' },
-  { gk:'Pre-Algebra', n:'Negative and zero exponents', s:'8.EE.1' },
-  { gk:'Pre-Algebra', n:'Inequalities, boundary value', s:'7.EE.4b' },
-  { gk:'Pre-Algebra', n:'Function notation', s:'F-IF.2' },
-  // Algebra I
-  { gk:'Algebra I', n:'Solving multi-step linear equations', s:'A-REI.3' },
-  { gk:'Algebra I', n:'Function evaluation', s:'F-IF.2' },
-  { gk:'Algebra I', n:'Discriminant value', s:'A-REI.4b' },
-  { gk:'Algebra I', n:'Factored quadratic to roots (sum or product)', s:'A-REI.4b' },
-  { gk:'Algebra I', n:'Slope or y-intercept from any form', s:'F-IF.7a' },
-  { gk:'Algebra I', n:'Distance between two points (integer triples)', s:'G-GPE.7' },
-  { gk:'Algebra I', n:'Midpoint, single coordinate', s:'G-GPE.6' },
-  { gk:'Algebra I', n:'Arithmetic sequences, nth term', s:'F-BF.2' },
-  { gk:'Algebra I', n:'Exponential evaluation', s:'F-LE' },
-  { gk:'Algebra I', n:'Polynomial evaluation at a point', s:'A-APR.1' },
-  // Geometry
-  { gk:'Geometry', n:'Triangle angle sum', s:'G-CO.10' },
-  { gk:'Geometry', n:'Polygon angle sums (interior or exterior)', s:'G-CO.11' },
-  { gk:'Geometry', n:'Parallel lines cut by a transversal', s:'G-CO.9' },
-  { gk:'Geometry', n:'Pythagorean theorem with integer triples', s:'G-SRT.8' },
-  { gk:'Geometry', n:'Special right triangles — Level A: 45-45-90', s:'G-SRT.6' },
-  { gk:'Geometry', n:'Special right triangles — Level B: 30-60-90', s:'G-SRT.6' },
-  { gk:'Geometry', n:'Right-triangle trig — Level A: find side', s:'G-SRT.8', c:1 },
-  { gk:'Geometry', n:'Right-triangle trig — Level B: find angle', s:'G-SRT.8', c:1 },
-  { gk:'Geometry', n:'Inscribed and central angle relationships', s:'G-C.2' },
-  { gk:'Geometry', n:'Distance and midpoint formulas', s:'G-GPE.6/7' },
-  { gk:'Geometry', n:'Similar triangles, missing side', s:'G-SRT.5' },
-  { gk:'Geometry', n:'Single transformations, one coordinate of image', s:'G-CO.5' },
-  // Algebra II
-  { gk:'Algebra II', n:'Logarithm evaluation — Level A: integer answers', s:'F-LE.4' },
-  { gk:'Algebra II', n:'Logarithm evaluation — Level B: change of base', s:'F-LE.4', c:1 },
-  { gk:'Algebra II', n:'Log properties on a single value', s:'F-LE.4' },
-  { gk:'Algebra II', n:'Solving exponential equations (clean)', s:'F-LE.4' },
-  { gk:'Algebra II', n:'Function composition output', s:'F-BF.1c' },
-  { gk:'Algebra II', n:'Complex number arithmetic, real or imaginary part', s:'N-CN.2' },
-  { gk:'Algebra II', n:'Modulus of a complex number', s:'N-CN' },
-  { gk:'Algebra II', n:'Arithmetic sequences, nth term', s:'F-BF.2' },
-  { gk:'Algebra II', n:'Geometric sequences, nth term', s:'F-BF.2', c:1 },
-  { gk:'Algebra II', n:'Vertex of parabola, x or y', s:'F-IF.8a' },
-  { gk:'Algebra II', n:'Vertical asymptote x-value', s:'F-IF.7d' },
-  // Pre-Calculus
-  { gk:'Pre-Calculus', n:'Unit circle exact values', s:'F-TF.2' },
-  { gk:'Pre-Calculus', n:'Inverse trig at standard values', s:'F-TF.6' },
-  { gk:'Pre-Calculus', n:'Trig at non-special angles', s:'F-TF', c:1 },
-  { gk:'Pre-Calculus', n:'Reference angle', s:'F-TF' },
-  { gk:'Pre-Calculus', n:'Period or amplitude of a trig function', s:'F-TF.5' },
-  { gk:'Pre-Calculus', n:'Vector magnitude', s:'N-VM.1', c:1 },
-  { gk:'Pre-Calculus', n:'Vector dot product', s:'N-VM.4' },
-  { gk:'Pre-Calculus', n:'Vector component', s:'N-VM.2' },
-  { gk:'Pre-Calculus', n:'2×2 determinants', s:'N-VM.10' },
-  { gk:'Pre-Calculus', n:'Algebraic limits (factor-cancel)', s:'' },
-  { gk:'Pre-Calculus', n:'Conic single feature (center coordinate, completed-square form)', s:'G-GPE' },
-  // Calculus
-  { gk:'Calculus', n:'Derivative at a point (clean polynomials)', s:'' },
-  { gk:'Calculus', n:'Slope of tangent line at a point', s:'' },
-  { gk:'Calculus', n:'Definite integrals with clean antiderivatives', s:'' },
-  { gk:'Calculus', n:'Algebraic limits and limits at infinity', s:'' },
-  { gk:'Calculus', n:'L’Hôpital limits with quick simplification', s:'' },
-  { gk:'Calculus', n:'Critical point x-values (low-degree polynomials)', s:'' },
-  { gk:'Calculus', n:'Inflection point x-values (low-degree polynomials)', s:'' },
-  { gk:'Calculus', n:'Average rate of change', s:'' },
-  { gk:'Calculus', n:'Absolute max or min on a closed interval (low-degree polynomials)', s:'' },
-  // Statistics
-  { gk:'Statistics', n:'Z-scores', s:'S-ID.4' },
-  { gk:'Statistics', n:'Normal probability from a Z-table', s:'', c:1 },
-  { gk:'Statistics', n:'Combinations', s:'S-CP', c:1 },
-  { gk:'Statistics', n:'Permutations', s:'S-CP', c:1 },
+// Bands group grades for the friendlier filter row.
+const GRADE_BANDS = [
+  { id: 'elem', label: 'Elementary K–5', short: 'K–5',  grades: ['K','1','2','3','4','5'] },
+  { id: 'mid',  label: 'Middle 6–8',     short: '6–8',  grades: ['6','7','8'] },
+  { id: 'hs',   label: 'High School',    short: 'HS',   grades: ['Pre-Algebra','Algebra I','Geometry','Algebra II','Pre-Calculus','Calculus'] },
+  { id: 'stat', label: 'Stats',          short: 'Stats',grades: ['Statistics'] },
 ];
-// Resolve grade label for each topic from gk
-TOPICS.forEach(t => { t.g = GRADE_LABELS[t.gk]; });
+const TOPIC_GROUPS = [
+  // Kindergarten
+  { id:'add-sub-10', short:'Add/Subtract within 10', long:'Single-digit addition and subtraction',
+    grades:{'K':'K.OA.5'}, fluency:{'K':true},
+    variants:[{label:'Addition'},{label:'Subtraction'},{label:'Mixed'}] },
+  { id:'decompose-teens', short:'Teen Decomposition', long:'Breaking apart numbers like 14 = 10 + ?',
+    grades:{'K':'K.NBT.1'}, variants:[{label:'Default'}] },
+  { id:'one-more-less', short:'One More, One Less', long:'Counting up or down by 1',
+    grades:{'K':'K.CC.4c'}, variants:[{label:'Default'}] },
+
+  // Grade 1
+  { id:'add-sub-20', short:'Add/Subtract within 20', long:'Single-digit operations crossing the ten',
+    grades:{'1':'1.OA.6'}, fluency:{'1':true},
+    variants:[
+      {label:'Addition: sums to 10'},
+      {label:'Addition: sums 11–20'},
+      {label:'Subtraction: minuends to 10'},
+      {label:'Subtraction: minuends 11–20'},
+    ] },
+  { id:'ten-more-less', short:'10 More, 10 Less', long:'Mental jumps of ten',
+    grades:{'1':'1.NBT.5'}, variants:[{label:'Default'}] },
+  { id:'two-plus-one-digit', short:'2-Digit + 1-Digit', long:'Adding ones to two-digit numbers',
+    grades:{'1':'1.NBT.4'}, variants:[{label:'Default'}] },
+  { id:'missing-addend', short:'Missing Addend', long:'Find the unknown addend (e.g. 6 + ? = 13)',
+    grades:{'1':'1.OA.8'}, variants:[{label:'Default'}] },
+
+  // Grade 2
+  { id:'add-sub-100', short:'Add/Subtract within 100', long:'Two-digit addition and subtraction',
+    grades:{'2':'2.NBT.5'}, fluency:{'2':true},
+    variants:[{label:'Within 50'},{label:'Within 100'}] },
+  { id:'place-value', short:'Place Value', long:'Identify place values in multi-digit numbers',
+    grades:{'2':'2.NBT.1'}, variants:[{label:'Default'}] },
+  { id:'money-cents', short:'Money Totals', long:'Adding coins and bills (in cents)',
+    grades:{'2':'2.MD.8'}, variants:[{label:'Default'}] },
+  { id:'skip-counting', short:'Skip Counting', long:'Filling in missing numbers in skip-count sequences',
+    grades:{'2':'2.NBT.2'}, variants:[{label:'Default'}] },
+
+  // Grade 3
+  { id:'mult-div-facts', short:'Multiplication & Division Facts', long:'Single-digit fact families within 100',
+    grades:{'3':'3.OA.7'}, fluency:{'3':true},
+    variants:[{label:'Multiplication'},{label:'Division'},{label:'Mixed'}] },
+  { id:'add-sub-1000', short:'Add/Subtract within 1000', long:'Three-digit addition and subtraction',
+    grades:{'3':'3.NBT.2'}, fluency:{'3':true}, variants:[{label:'Default'}] },
+  { id:'rounding', short:'Rounding', long:'Round to nearest 10 or 100',
+    grades:{'3':'3.NBT.1','4':'4.NBT.3'},
+    variants:[{label:'Nearest 10'},{label:'Nearest 100'}] },
+  { id:'rectangle-area', short:'Rectangle Area', long:'Area = length × width',
+    grades:{'3':'3.MD.7'}, variants:[{label:'Default'}] },
+  { id:'perimeter', short:'Perimeter', long:'Sum of all side lengths',
+    grades:{'3':'3.MD.8'}, variants:[{label:'Default'}] },
+  { id:'mult-multiples-10', short:'Multiplying by Multiples of 10', long:'Products of single digits and 10s',
+    grades:{'3':'3.NBT.3'}, variants:[{label:'Default'}] },
+  { id:'equiv-fractions', short:'Equivalent Fractions', long:'Find the missing numerator',
+    grades:{'3':'3.NF.3b','4':'4.NF.1'}, variants:[{label:'Default'}] },
+
+  // Grade 4
+  { id:'multi-digit-add-sub', short:'Multi-Digit Add/Subtract', long:'Standard algorithm for large numbers',
+    grades:{'4':'4.NBT.4'}, fluency:{'4':true}, variants:[{label:'Default'}] },
+  { id:'multi-digit-mult', short:'Multi-Digit Multiplication', long:'Multiplying larger numbers',
+    grades:{'4':'4.NBT.5','5':'5.NBT.5'},
+    variants:[{label:'2-digit × 1-digit'},{label:'2-digit × 2-digit'}] },
+  { id:'multi-digit-division', short:'Multi-Digit Division', long:'Division with multi-digit dividends',
+    grades:{'4':'4.NBT.6','5':'5.NBT.6'},
+    variants:[{label:'1-digit divisor'}] },
+  { id:'frac-add-sub-like', short:'Like-Denominator Fractions', long:'Add and subtract fractions with same denominator',
+    grades:{'4':'4.NF.3'}, variants:[{label:'Default'}] },
+  { id:'frac-times-whole', short:'Fraction × Whole', long:'Multiplying a fraction by a whole number',
+    grades:{'4':'4.NF.4'}, variants:[{label:'Default'}] },
+  { id:'decimal-fraction-conv', short:'Decimal-Fraction Conversion', long:'Tenths and hundredths, both directions',
+    grades:{'4':'4.NF.6'}, variants:[{label:'Default'}] },
+  { id:'angle-additivity', short:'Angle Additivity', long:'Adjacent angles sum to a whole',
+    grades:{'4':'4.MD.7'}, variants:[{label:'Default'}] },
+  { id:'unit-conversion', short:'Unit Conversion', long:'Convert within measurement systems',
+    grades:{'4':'4.MD.1','5':'5.MD.1'}, variants:[{label:'Default'}] },
+
+  // Grade 5
+  { id:'decimal-ops', short:'Decimal Operations', long:'Add, subtract, multiply with decimals',
+    grades:{'5':'5.NBT.7'},
+    variants:[{label:'Addition/Subtraction'},{label:'Multiplication'}] },
+  { id:'frac-times-frac', short:'Multiplying Fractions', long:'Fraction × fraction',
+    grades:{'5':'5.NF.4'}, variants:[{label:'Default'}] },
+  { id:'frac-div', short:'Dividing Fractions', long:'Fraction and whole-number division',
+    grades:{'5':'5.NF.7','6':'6.NS.1'},
+    variants:[{label:'Fraction ÷ whole, whole ÷ unit fraction'},{label:'Fraction ÷ fraction'}] },
+  { id:'volume-prisms', short:'Volume of Prisms', long:'Rectangular prism volume',
+    grades:{'5':'5.MD.5'}, variants:[{label:'Default'}] },
+  { id:'powers-of-10', short:'Powers of 10', long:'Multiplying and dividing by powers of 10',
+    grades:{'5':'5.NBT.2'}, variants:[{label:'Default'}] },
+  { id:'order-of-ops', short:'Order of Operations', long:'PEMDAS evaluation',
+    grades:{'5':'5.OA.1','6':'6.EE.2c'}, variants:[{label:'Default'}] },
+
+  // Grade 6
+  { id:'gcf-lcm', short:'GCF & LCM', long:'Greatest common factor, least common multiple',
+    grades:{'6':'6.NS.4'},
+    variants:[{label:'GCF'},{label:'LCM'}] },
+  { id:'absolute-value', short:'Absolute Value', long:'Distance from zero',
+    grades:{'6':'6.NS.7c'}, variants:[{label:'Default'}] },
+  { id:'unit-rates', short:'Unit Rates', long:'Rates per single unit',
+    grades:{'6':'6.RP.2','7':'7.RP.1'}, variants:[{label:'Default'}] },
+  { id:'percents', short:'Percents', long:'Find percent of a quantity',
+    grades:{'6':'6.RP.3c','7':'7.RP.3'}, variants:[{label:'Default'}] },
+  { id:'eval-expressions', short:'Evaluating Expressions', long:'Substitute values into algebraic expressions',
+    grades:{'6':'6.EE.2c','7':'7.EE.2'}, variants:[{label:'Default'}] },
+  { id:'one-step-eqs', short:'One-Step Equations', long:'Solve with one operation',
+    grades:{'6':'6.EE.7'}, variants:[{label:'Default'}] },
+  { id:'polygon-area', short:'Polygon Areas', long:'Triangles, parallelograms, trapezoids',
+    grades:{'6':'6.G.1'},
+    variants:[{label:'Triangles'},{label:'Parallelograms'},{label:'Trapezoids'}] },
+
+  // Grade 7 — our existing 3 sets live in this group
+  { id:'add-negatives', short:'Adding Negatives', long:'Adding & subtracting rational numbers',
+    grades:{'6':'6.NS.5','7':'7.NS.1','Pre-Algebra':'7.NS.1'},
+    fluency:{'7':true},
+    variants:[
+      {label:'Mixed', path:'sets/grade-6/integer-operations-addition-subtraction.csv', recommended:true},
+      {label:'Addition only', path:'sets/grade-6/integer-operations-addition.csv'},
+      {label:'Subtraction only', path:'sets/grade-6/integer-operations-subtraction.csv'},
+      {label:'Including rationals (fractions/decimals)'},
+    ] },
+  { id:'mult-negatives', short:'Multiplying Negatives', long:'Multiplying & dividing rational numbers',
+    grades:{'7':'7.NS.2','Pre-Algebra':'7.NS.2'}, fluency:{'7':true},
+    variants:[{label:'Integers'},{label:'Including rationals'}] },
+  { id:'two-step-eqs', short:'Two-Step Equations', long:'Solve with two operations',
+    grades:{'7':'7.EE.4a'}, variants:[{label:'Default'}] },
+  { id:'circle-area-circ', short:'Circle Area & Circumference', long:'Using π in answers',
+    grades:{'7':'7.G.4'}, variants:[{label:'Area'},{label:'Circumference'}] },
+  { id:'simple-prob', short:'Simple Probability', long:'Single-event likelihood',
+    grades:{'7':'7.SP.5','Statistics':'S-CP'}, variants:[{label:'Default'}] },
+  { id:'angle-relationships', short:'Angle Relationships', long:'Complementary, supplementary, vertical',
+    grades:{'7':'7.G.5','8':'8.G.5'}, variants:[{label:'Default'}] },
+  { id:'proportions', short:'Proportions', long:'Solving for missing parts of a proportion',
+    grades:{'7':'7.RP.2','Pre-Algebra':'7.RP.2'}, variants:[{label:'Default'}] },
+  { id:'inequalities', short:'Inequalities', long:'Boundary value of a one-variable inequality',
+    grades:{'7':'7.EE.4b','Pre-Algebra':'7.EE.4b'}, variants:[{label:'Default'}] },
+
+  // Grade 8 + cross-refs into Pre-Algebra/Algebra I
+  { id:'exponent-rules', short:'Exponent Rules', long:'Product, quotient, and power rules',
+    grades:{'8':'8.EE.1','Pre-Algebra':'8.EE.1','Algebra II':'F-LE'},
+    variants:[{label:'Integer exponents'},{label:'Negative & zero exponents'}] },
+  { id:'sq-cube-roots', short:'Square & Cube Roots', long:'Perfect squares and cubes',
+    grades:{'8':'8.EE.2'},
+    variants:[{label:'Squares to 225'},{label:'Cubes to 1000'}] },
+  { id:'sci-notation', short:'Scientific Notation', long:'Operations in scientific notation',
+    grades:{'8':'8.EE.4'}, calc:true, variants:[{label:'Default'}] },
+  { id:'slope', short:'Slope', long:'Slope from points or equation',
+    grades:{'8':'8.EE.6','Pre-Algebra':'8.F.3','Algebra I':'F-IF.7a'},
+    variants:[{label:'From two points'},{label:'From y = mx + b'},{label:'From any form'}] },
+  { id:'multi-step-eqs', short:'Multi-Step Equations', long:'Linear equations with multiple steps',
+    grades:{'7':'7.EE.4a','8':'8.EE.7','Pre-Algebra':'8.EE.7b','Algebra I':'A-REI.3'},
+    variants:[{label:'Variables on both sides'},{label:'With distribution'}] },
+  { id:'pythagorean', short:'Pythagorean Theorem', long:'Right-triangle side lengths',
+    grades:{'8':'8.G.7','Geometry':'G-SRT.8'},
+    variants:[{label:'Integer triples'},{label:'Find hypotenuse'},{label:'Find leg'}] },
+  { id:'function-eval', short:'Function Evaluation', long:'Evaluate functions at given inputs',
+    grades:{'8':'8.F.1','Pre-Algebra':'F-IF.2','Algebra I':'F-IF.2'},
+    variants:[{label:'Default'}] },
+  { id:'function-notation', short:'Function Notation', long:'Reading and using f(x) notation',
+    grades:{'Pre-Algebra':'F-IF.2','Algebra II':'F-IF.2'},
+    variants:[{label:'Default'}] },
+
+  // Algebra I
+  { id:'quadratic-roots', short:'Quadratic Roots', long:'Discriminant and roots of factored quadratics',
+    grades:{'Algebra I':'A-REI.4b','Algebra II':'A-REI.4b'},
+    variants:[{label:'Discriminant value'},{label:'Sum of roots'},{label:'Product of roots'}] },
+  { id:'distance-formula', short:'Distance Formula', long:'Distance between two points',
+    grades:{'Algebra I':'G-GPE.7','Geometry':'G-GPE.7'},
+    variants:[{label:'Integer triples'}] },
+  { id:'midpoint-formula', short:'Midpoint Formula', long:'Midpoint of a line segment',
+    grades:{'Algebra I':'G-GPE.6','Geometry':'G-GPE.6'},
+    variants:[{label:'Single coordinate'}] },
+  { id:'sequences', short:'Sequences', long:'Arithmetic and geometric, nth term',
+    grades:{'Algebra I':'F-BF.2','Algebra II':'F-BF.2'},
+    variants:[{label:'Arithmetic'},{label:'Geometric', calc:true}] },
+  { id:'exponentials', short:'Exponential Functions', long:'Evaluating exponential expressions',
+    grades:{'Algebra I':'F-LE','Algebra II':'F-LE.4'},
+    variants:[{label:'Evaluation'},{label:'Solving exponential equations'}] },
+  { id:'polynomial-eval', short:'Polynomial Evaluation', long:'Evaluate polynomials at a point',
+    grades:{'Algebra I':'A-APR.1'}, variants:[{label:'Default'}] },
+
+  // Geometry
+  { id:'triangle-angles', short:'Triangle Angle Sum', long:'Interior angles of a triangle sum to 180°',
+    grades:{'Geometry':'G-CO.10'}, variants:[{label:'Default'}] },
+  { id:'polygon-angles', short:'Polygon Angle Sums', long:'Interior and exterior polygon angles',
+    grades:{'Geometry':'G-CO.11'},
+    variants:[{label:'Interior'},{label:'Exterior'}] },
+  { id:'parallel-transversal', short:'Parallel Lines & Transversals', long:'Angle relationships across parallel lines',
+    grades:{'8':'8.G.5','Geometry':'G-CO.9'}, variants:[{label:'Default'}] },
+  { id:'special-right-tri', short:'Special Right Triangles', long:'45-45-90 and 30-60-90 ratios',
+    grades:{'Geometry':'G-SRT.6'},
+    variants:[{label:'45-45-90'},{label:'30-60-90'}] },
+  { id:'right-tri-trig', short:'Right-Triangle Trig', long:'sin, cos, tan ratios',
+    grades:{'Geometry':'G-SRT.8','Pre-Calculus':'G-SRT.8'}, calc:true,
+    variants:[{label:'Find side'},{label:'Find angle'}] },
+  { id:'circle-theorems', short:'Circle Theorems', long:'Inscribed and central angle relationships',
+    grades:{'Geometry':'G-C.2'},
+    variants:[{label:'Inscribed angles'},{label:'Central angles'}] },
+  { id:'similar-triangles', short:'Similar Triangles', long:'Find missing side using similarity',
+    grades:{'Geometry':'G-SRT.5'}, variants:[{label:'Default'}] },
+  { id:'transformations', short:'Transformations', long:'Single transformations, image coordinates',
+    grades:{'Geometry':'G-CO.5'},
+    variants:[{label:'Translations'},{label:'Reflections'},{label:'Rotations'}] },
+
+  // Algebra II
+  { id:'logarithms', short:'Logarithms', long:'Evaluation, properties, equations',
+    grades:{'Algebra II':'F-LE.4'},
+    variants:[
+      {label:'Integer answers'},
+      {label:'Change of base', calc:true},
+      {label:'Properties on a single value'},
+      {label:'Solving exponential equations'},
+    ] },
+  { id:'function-comp', short:'Function Composition', long:'Output of f(g(x))',
+    grades:{'Algebra II':'F-BF.1c'}, variants:[{label:'Default'}] },
+  { id:'complex-numbers', short:'Complex Numbers', long:'Arithmetic and modulus',
+    grades:{'Algebra II':'N-CN.2'},
+    variants:[{label:'Real or imaginary part'},{label:'Modulus'}] },
+  { id:'parabola-vertex', short:'Parabola Vertex', long:'Vertex coordinates of a parabola',
+    grades:{'Algebra II':'F-IF.8a'},
+    variants:[{label:'x-coordinate'},{label:'y-coordinate'}] },
+  { id:'rational-asymptote', short:'Rational Function Asymptotes', long:'Vertical asymptote x-value',
+    grades:{'Algebra II':'F-IF.7d'}, variants:[{label:'Default'}] },
+
+  // Pre-Calculus
+  { id:'trig-values', short:'Trig Values', long:'Unit circle and reference angles',
+    grades:{'Pre-Calculus':'F-TF.2'},
+    variants:[
+      {label:'Unit circle exact'},
+      {label:'Inverse trig at standard values'},
+      {label:'Reference angle'},
+      {label:'Non-special angles', calc:true},
+    ] },
+  { id:'trig-graphs', short:'Trig Graphs', long:'Period and amplitude',
+    grades:{'Pre-Calculus':'F-TF.5'},
+    variants:[{label:'Period'},{label:'Amplitude'}] },
+  { id:'vectors', short:'Vectors', long:'Magnitude, dot product, components',
+    grades:{'Pre-Calculus':'N-VM'},
+    variants:[
+      {label:'Magnitude', calc:true},
+      {label:'Dot product'},
+      {label:'Component'},
+    ] },
+  { id:'determinants', short:'2×2 Determinants', long:'Determinant of a 2×2 matrix',
+    grades:{'Pre-Calculus':'N-VM.10'}, variants:[{label:'Default'}] },
+  { id:'limits', short:'Limits', long:'Algebraic and at-infinity limits',
+    grades:{'Pre-Calculus':'','Calculus':''},
+    variants:[
+      {label:'Algebraic (factor cancel)'},
+      {label:'Limits at infinity'},
+      {label:"L’Hôpital's rule"},
+    ] },
+  { id:'conics', short:'Conic Sections', long:'Center coordinate from completed-square form',
+    grades:{'Pre-Calculus':'G-GPE'}, variants:[{label:'Default'}] },
+
+  // Calculus
+  { id:'derivatives', short:'Derivatives', long:'Polynomial derivatives at a point',
+    grades:{'Calculus':''},
+    variants:[{label:'Derivative at a point'},{label:'Tangent line slope'}] },
+  { id:'integrals', short:'Definite Integrals', long:'Polynomials with clean antiderivatives',
+    grades:{'Calculus':''}, variants:[{label:'Default'}] },
+  { id:'critical-points', short:'Critical Points', long:'Critical and inflection x-values',
+    grades:{'Calculus':''},
+    variants:[{label:'Critical points'},{label:'Inflection points'}] },
+  { id:'avg-rate', short:'Average Rate of Change', long:'Mean rate over an interval',
+    grades:{'Calculus':''}, variants:[{label:'Default'}] },
+  { id:'optimization', short:'Optimization', long:'Absolute max/min on a closed interval',
+    grades:{'Calculus':''}, variants:[{label:'Default'}] },
+
+  // Statistics
+  { id:'z-scores', short:'Z-Scores', long:'Standardized scores in normal distributions',
+    grades:{'Statistics':'S-ID.4'},
+    variants:[{label:'Z-score'},{label:'Normal probability', calc:true}] },
+  { id:'counting', short:'Counting Methods', long:'Combinations and permutations',
+    grades:{'Statistics':'S-CP'}, calc:true,
+    variants:[{label:'Combinations'},{label:'Permutations'}] },
+];
+
+// Derived helpers
+function topicIsPlayable(group) {
+  return group.variants.some(v => v.path);
+}
+function topicPrimaryGrade(group) {
+  // Prefer fluency grade if any; else first grade in GRADE_ORDER that this group spans.
+  const grades = Object.keys(group.grades);
+  if (group.fluency) {
+    for (const gk of grades) if (group.fluency[gk]) return gk;
+  }
+  for (const gk of GRADE_ORDER) if (grades.includes(gk)) return gk;
+  return grades[0];
+}
 
 /* ============================================================
    CSV PARSER (handles quoted fields, CRLF/LF, whitespace)
@@ -2324,8 +2560,13 @@ function applyLoadedSet(problems, name, allRows = null) {
     : problems.map(p => ({ id: newRowId(), column: p.column, problem: p.problem, answer: String(p.answer), errors: [] }));
 }
 
+// Find a variant by its CSV path. Returns { group, variant } or null.
 function findTopicByPath(path) {
-  return TOPICS.find(t => t.path === path) || null;
+  for (const group of TOPIC_GROUPS) {
+    const variant = group.variants.find(v => v.path === path);
+    if (variant) return { group, variant };
+  }
+  return null;
 }
 
 function fetchAndLoadSet(set, label, action, errElId = 'hp-set-error') {
@@ -2384,7 +2625,10 @@ function loadSetAndPlay(csv, filename, errorElId = null) {
 }
 
 // Homepage filter state — persists across re-renders within a session
-const _hpFilter = { grade: '', query: '' };
+// band: '' (All) or band id ('elem','mid','hs','stat')
+// grade: '' (no grade picked) or specific gradeKey
+// expandedId: id of the topic group whose variants are currently expanded ('' = none)
+const _hpFilter = { band: '', grade: '', query: '', expandedId: '' };
 
 function renderHomepage() {
   const container = document.getElementById('hp-tiles');
@@ -2402,23 +2646,24 @@ function renderHomepage() {
       <div id="hp-upload-error" hidden></div>
     </div>`;
 
-  // Available sets section — search + grade chips + filtered list
+  // Topic picker section — search + band/grade chips + filtered list
   const availableTile = `
     <div class="hp-tile hp-tile-sets">
-      <div class="hp-tile-header">Ready to Play</div>
+      <div class="hp-tile-header">Pick a topic to play</div>
       <div class="hp-search-wrap">
         <input id="hp-search" class="hp-search" type="search"
           placeholder="Search topics or standards…"
           value="${escHtml(_hpFilter.query)}"
           aria-label="Search topics">
       </div>
-      <div class="hp-chips" id="hp-chips" role="tablist" aria-label="Filter by grade level">
-        <button class="hp-chip${_hpFilter.grade === '' ? ' active' : ''}" data-grade="">All</button>
-        ${GRADE_ORDER.map(gk => `<button class="hp-chip${_hpFilter.grade === gk ? ' active' : ''}" data-grade="${escHtml(gk)}">${escHtml(GRADE_CHIP_LABELS[gk])}</button>`).join('')}
+      <div class="hp-chips hp-band-row" id="hp-bands" role="tablist" aria-label="Filter by grade band">
+        <button class="hp-chip${_hpFilter.band === '' ? ' active' : ''}" data-band="">All</button>
+        ${GRADE_BANDS.map(b => `<button class="hp-chip${_hpFilter.band === b.id ? ' active' : ''}" data-band="${escHtml(b.id)}">${escHtml(b.label)}</button>`).join('')}
       </div>
+      <div class="hp-chips hp-grade-row" id="hp-grades" aria-label="Filter by specific grade"></div>
       <div id="hp-sets-list" class="hp-sets-list" aria-live="polite"></div>
       <div class="hp-roadmap-foot">
-        <button class="hp-link-btn" id="hp-roadmap-btn"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-right"/></svg> View full topic roadmap</button>
+        <button class="hp-link-btn" id="hp-roadmap-btn">Browse all topics <svg class="icon" aria-hidden="true"><use href="#icon-chevron-right"/></svg></button>
       </div>
     </div>`;
 
@@ -2443,88 +2688,214 @@ function renderHomepage() {
   const searchEl = document.getElementById('hp-search');
   searchEl.addEventListener('input', () => {
     _hpFilter.query = searchEl.value;
+    _hpFilter.expandedId = '';
     renderAvailableSets();
   });
 
-  // Grade chips
-  document.getElementById('hp-chips').addEventListener('click', e => {
+  // Band chips (top row)
+  document.getElementById('hp-bands').addEventListener('click', e => {
+    const chip = e.target.closest('.hp-chip');
+    if (!chip) return;
+    _hpFilter.band = chip.dataset.band;
+    _hpFilter.grade = '';
+    _hpFilter.expandedId = '';
+    document.querySelectorAll('#hp-bands .hp-chip').forEach(c => c.classList.toggle('active', c === chip));
+    renderGradeChips();
+    renderAvailableSets();
+  });
+
+  // Grade chips delegated (rendered into #hp-grades on band selection)
+  document.getElementById('hp-grades').addEventListener('click', e => {
     const chip = e.target.closest('.hp-chip');
     if (!chip) return;
     _hpFilter.grade = chip.dataset.grade;
-    document.querySelectorAll('#hp-chips .hp-chip').forEach(c => c.classList.toggle('active', c === chip));
+    _hpFilter.expandedId = '';
+    document.querySelectorAll('#hp-grades .hp-chip').forEach(c => c.classList.toggle('active', c === chip));
     renderAvailableSets();
   });
 
+  renderGradeChips();
   renderAvailableSets();
 }
 
-// Render the filtered list of available (playable) topics
+// Render the second-row grade chips when a band is selected
+function renderGradeChips() {
+  const row = document.getElementById('hp-grades');
+  if (!row) return;
+  if (!_hpFilter.band) { row.innerHTML = ''; row.hidden = true; return; }
+  const band = GRADE_BANDS.find(b => b.id === _hpFilter.band);
+  if (!band) { row.innerHTML = ''; row.hidden = true; return; }
+  row.hidden = false;
+  row.innerHTML = `
+    <button class="hp-chip${_hpFilter.grade === '' ? ' active' : ''}" data-grade="">All ${escHtml(band.short)}</button>
+    ${band.grades.map(gk => `<button class="hp-chip${_hpFilter.grade === gk ? ' active' : ''}" data-grade="${escHtml(gk)}">${escHtml(GRADE_CHIP_LABELS[gk])}</button>`).join('')}
+  `;
+}
+
+// Determine which grades a given filter combination should display.
+// Returns an ordered list of grade keys (sorted by GRADE_ORDER).
+function _activeGrades() {
+  if (_hpFilter.grade) return [_hpFilter.grade];
+  if (_hpFilter.band) {
+    const band = GRADE_BANDS.find(b => b.id === _hpFilter.band);
+    return band ? band.grades : [];
+  }
+  return GRADE_ORDER.slice();
+}
+
+// Search predicate against a topic group
+function _topicMatchesQuery(group, q) {
+  if (!q) return true;
+  q = q.toLowerCase();
+  if (group.short.toLowerCase().includes(q)) return true;
+  if (group.long.toLowerCase().includes(q)) return true;
+  if (Object.values(group.grades).some(s => (s||'').toLowerCase().includes(q))) return true;
+  if (Object.keys(group.grades).some(gk => (GRADE_LABELS[gk]||'').toLowerCase().includes(q))) return true;
+  if (group.variants.some(v => v.label.toLowerCase().includes(q))) return true;
+  return false;
+}
+
+// Render filtered playable topic groups, expanded into per-grade sections
 function renderAvailableSets() {
   const listEl = document.getElementById('hp-sets-list');
   if (!listEl) return;
-  const q = _hpFilter.query.trim().toLowerCase();
-  const matches = TOPICS.filter(t => {
-    if (!t.path) return false;  // hide coming-soon
-    if (_hpFilter.grade && t.gk !== _hpFilter.grade) return false;
-    if (q && !(t.n.toLowerCase().includes(q) || (t.s||'').toLowerCase().includes(q) || t.g.toLowerCase().includes(q))) return false;
-    return true;
+
+  const activeGrades = _activeGrades();
+  const q = _hpFilter.query.trim();
+
+  // For each active grade, list the topic groups that:
+  //   1. have an entry for that grade,
+  //   2. are playable (have ≥1 variant with path),
+  //   3. match the search query.
+  const sections = [];
+  activeGrades.forEach(gk => {
+    const groups = TOPIC_GROUPS.filter(g =>
+      g.grades[gk] !== undefined &&
+      topicIsPlayable(g) &&
+      _topicMatchesQuery(g, q)
+    );
+    if (groups.length) sections.push({ gk, groups });
   });
 
-  if (matches.length === 0) {
-    const filterDesc = _hpFilter.grade ? `${GRADE_LABELS[_hpFilter.grade]}` : (q ? `"${escHtml(q)}"` : 'this view');
+  if (sections.length === 0) {
+    const filterDesc = _hpFilter.grade
+      ? GRADE_LABELS[_hpFilter.grade]
+      : (_hpFilter.band ? GRADE_BANDS.find(b => b.id === _hpFilter.band)?.label : (q ? `"${escHtml(q)}"` : 'this view'));
     listEl.innerHTML = `<div class="hp-empty">
-      <p>No playable sets match ${filterDesc} yet.</p>
-      <p class="hp-empty-hint">Check the <button class="hp-link-btn-inline" id="hp-empty-roadmap">topic roadmap</button> to see what's coming, or upload your own CSV above.</p>
+      <p>Nothing built for <strong>${filterDesc}</strong> yet.</p>
+      <p class="hp-empty-hint">Peek at the <button class="hp-link-btn-inline" id="hp-empty-roadmap">topic roadmap</button> to see what's coming, or upload your own CSV above.</p>
     </div>`;
     document.getElementById('hp-empty-roadmap')?.addEventListener('click', () => { renderRoadmapOverlay(); openOverlay('roadmap-overlay'); });
     return;
   }
 
-  // Group by grade
-  const byGrade = {};
-  matches.forEach(t => { (byGrade[t.gk] = byGrade[t.gk] || []).push(t); });
-  const html = GRADE_ORDER.filter(gk => byGrade[gk]).map(gk => {
-    const items = byGrade[gk].map(t => {
-      const tags = (t.f ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
-                 + (t.c ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
-      return `<button class="hp-set-card" data-path="${escHtml(t.path)}">
-        <div class="hp-set-name">${escHtml(t.n)} ${tags}</div>
-        ${t.s ? `<div class="hp-set-std">${escHtml(t.s)}</div>` : ''}
-      </button>`;
-    }).join('');
-    return `<div class="hp-grade-group">
+  listEl.innerHTML = sections.map(({ gk, groups }) => `
+    <div class="hp-grade-group">
       <div class="hp-grade-label">${escHtml(GRADE_LABELS[gk])}</div>
-      <div class="hp-set-cards">${items}</div>
-    </div>`;
-  }).join('');
-  listEl.innerHTML = html;
+      <div class="hp-set-cards">${groups.map(g => _renderTopicCard(g, gk)).join('')}</div>
+    </div>
+  `).join('');
 
-  // Wire set clicks via delegation
+  // Wire interactions via delegation
   listEl.onclick = e => {
+    // Variant button click → load the set
+    const variantBtn = e.target.closest('.hp-variant-btn[data-path]');
+    if (variantBtn) {
+      const topic = findTopicByPath(variantBtn.dataset.path);
+      if (!topic) return;
+      document.getElementById('hp-set-error').hidden = true;
+      const variantSuffix = topic.group.variants.length > 1 ? ` — ${topic.variant.label}` : '';
+      const label = `${GRADE_LABELS[variantBtn.dataset.gk] || ''} — ${topic.group.short}${variantSuffix}`.replace(/^ — /, '');
+      fetchAndLoadSet(topic.variant, label, 'print');
+      return;
+    }
+    // Card click → either expand variants or launch directly
     const card = e.target.closest('.hp-set-card');
     if (!card) return;
-    const topic = findTopicByPath(card.dataset.path);
-    if (!topic) return;
-    document.getElementById('hp-set-error').hidden = true;
-    const label = `${topic.g} — ${topic.n}`;
-    fetchAndLoadSet(topic, label, 'print');
+    const id = card.dataset.id;
+    const group = TOPIC_GROUPS.find(g => g.id === id);
+    if (!group) return;
+    const playableVariants = group.variants.filter(v => v.path);
+    if (playableVariants.length === 1) {
+      // Single variant — launch directly
+      const v = playableVariants[0];
+      const gk = card.dataset.gk;
+      document.getElementById('hp-set-error').hidden = true;
+      const label = `${GRADE_LABELS[gk]} — ${group.short}`;
+      fetchAndLoadSet(v, label, 'print');
+      return;
+    }
+    // Multiple variants — toggle expansion
+    _hpFilter.expandedId = (_hpFilter.expandedId === id) ? '' : id;
+    renderAvailableSets();
   };
 }
 
-// Roadmap overlay — show the entire master list, organized by grade
+// Render a single topic card for a given group + grade context
+function _renderTopicCard(group, gk) {
+  const std = group.grades[gk] || '';
+  const isFluency = !!(group.fluency && group.fluency[gk]);
+  const tags = (isFluency ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
+             + (group.calc ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
+  const playableVariants = group.variants.filter(v => v.path);
+  const hasMultipleVariants = playableVariants.length > 1;
+  const isExpanded = _hpFilter.expandedId === group.id && hasMultipleVariants;
+  const chevron = hasMultipleVariants
+    ? `<svg class="icon hp-card-chevron" aria-hidden="true"><use href="#icon-chevron-right"/></svg>`
+    : '';
+  const variantList = isExpanded
+    ? `<div class="hp-variant-list">${playableVariants.map(v => `
+        <button class="hp-variant-btn${v.recommended ? ' recommended' : ''}" data-path="${escHtml(v.path)}" data-gk="${escHtml(gk)}">
+          <span class="hp-variant-label">${escHtml(v.label)}</span>
+          ${v.recommended ? '<span class="hp-variant-tag">recommended</span>' : ''}
+          ${v.calc ? '<span class="hp-tag tag-calc">[calc]</span>' : ''}
+        </button>`).join('')}</div>`
+    : '';
+  return `<div class="hp-set-card${isExpanded ? ' expanded' : ''}" data-id="${escHtml(group.id)}" data-gk="${escHtml(gk)}" role="button" tabindex="0" aria-expanded="${isExpanded}">
+    <div class="hp-set-card-header">
+      <div class="hp-set-name">${escHtml(group.short)} ${tags}</div>
+      ${chevron}
+    </div>
+    <div class="hp-set-long">${escHtml(group.long)}</div>
+    ${std ? `<div class="hp-set-std">${escHtml(std)}</div>` : ''}
+    ${variantList}
+  </div>`;
+}
+
+// Roadmap overlay — show every topic group with all its grade appearances
 function renderRoadmapOverlay() {
   const body = document.getElementById('roadmap-body');
   if (!body) return;
+
+  // Build (gradeKey → groups[]) map
   const byGrade = {};
-  TOPICS.forEach(t => { (byGrade[t.gk] = byGrade[t.gk] || []).push(t); });
+  TOPIC_GROUPS.forEach(g => {
+    Object.keys(g.grades).forEach(gk => {
+      (byGrade[gk] = byGrade[gk] || []).push(g);
+    });
+  });
+
   body.innerHTML = GRADE_ORDER.filter(gk => byGrade[gk]).map(gk => {
-    const rows = byGrade[gk].map(t => {
-      const tags = (t.f ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
-                 + (t.c ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
-      const status = t.path ? '<span class="rm-status rm-ready">Ready</span>' : '<span class="rm-status rm-soon">Coming soon</span>';
-      return `<li class="rm-row${t.path ? ' rm-ready-row' : ''}">
-        <span class="rm-name">${escHtml(t.n)} ${tags}</span>
-        ${t.s ? `<span class="rm-std">${escHtml(t.s)}</span>` : '<span class="rm-std"></span>'}
+    const rows = byGrade[gk].map(group => {
+      const std = group.grades[gk] || '';
+      const isFluency = !!(group.fluency && group.fluency[gk]);
+      const tags = (isFluency ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
+                 + (group.calc ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
+      const status = topicIsPlayable(group)
+        ? '<span class="rm-status rm-ready">Ready</span>'
+        : '<span class="rm-status rm-soon">Coming soon</span>';
+      const variantsLine = group.variants.length > 1
+        ? `<div class="rm-variants">${group.variants.map(v =>
+            `<span class="rm-variant${v.path ? ' rm-variant-ready' : ''}">${escHtml(v.label)}</span>`
+          ).join(' · ')}</div>`
+        : '';
+      return `<li class="rm-row${topicIsPlayable(group) ? ' rm-ready-row' : ''}">
+        <div class="rm-name-col">
+          <div class="rm-name">${escHtml(group.short)} ${tags}</div>
+          <div class="rm-long">${escHtml(group.long)}</div>
+          ${variantsLine}
+        </div>
+        <span class="rm-std">${escHtml(std)}</span>
         ${status}
       </li>`;
     }).join('');
