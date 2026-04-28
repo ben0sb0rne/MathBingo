@@ -1,0 +1,15 @@
+# Claude Code local config (per-machine; not part of the project)
+.claude/
+
+# Unrelated LEGO analysis project — kept local
+lego-analysis/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

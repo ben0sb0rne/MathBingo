@@ -1,0 +1,4548 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Math Bingo Caller</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@latest/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/alfa-slab-one@latest/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/comic-neue@latest/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/creepster@latest/index.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@latest/index.css">
+<style>
+/* ── CSS Variables ── */
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface2: #f0f0f0;
+  --border: #ddd;
+  --text: #1a1a1a;
+  --text-muted: #666;
+  --primary: #1565c0;
+  --primary-fg: #fff;
+  --danger: #c62828;
+  --danger-fg: #fff;
+  --col-B: #1565c0;
+  --col-I: #2e7d32;
+  --col-N: #e65100;
+  --col-G: #6a1b9a;
+  --col-O: #b71c1c;
+  --col-B-light: #e3f2fd;
+  --col-I-light: #e8f5e9;
+  --col-N-light: #fff3e0;
+  --col-G-light: #f3e5f5;
+  --col-O-light: #ffebee;
+  --radius: 10px;
+  --shadow: 0 2px 8px rgba(0,0,0,.12);
+  --topbar-h: clamp(52px, 3.2vmin, 88px);
+  --bottomnav-h: clamp(64px, 4.2vmin, 112px);
+  --rbs: 1.5;
+}
+[data-theme="dark"] {
+  --bg: #121212;
+  --surface: #1e1e1e;
+  --surface2: #2a2a2a;
+  --border: #444;
+  --text: #f0f0f0;
+  --text-muted: #999;
+  --primary: #5c9ce6;
+  --primary-fg: #000;
+  --col-B-light: #0d2a4a;
+  --col-I-light: #0a2a0f;
+  --col-N-light: #2a1500;
+  --col-G-light: #1e0a2a;
+  --col-O-light: #2a0a0a;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+:root { --app-font: system-ui, -apple-system, sans-serif; }
+button, input, select, textarea, optgroup { font-family: inherit; }
+body {
+  font-family: var(--app-font);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── App shell ── */
+#app { display: flex; flex-direction: column; height: 100vh; height: 100dvh; }
+
+/* ── Top bar ── */
+#topbar {
+  height: var(--topbar-h);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 8px;
+  flex-shrink: 0;
+  box-shadow: var(--shadow);
+  z-index: 10;
+}
+#topbar .spacer { flex: 1; }
+#topbar .center { flex: 1; text-align: center; font-size: .85rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.icon-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: .82rem;
+  cursor: pointer;
+  color: var(--text);
+  white-space: nowrap;
+  transition: background .15s;
+}
+.icon-btn:hover { background: var(--surface2); }
+.icon-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.topbar-right { display: flex; gap: 6px; }
+
+/* ── Inline SVG icons ── */
+.icon {
+  width: 1em; height: 1em;
+  vertical-align: -0.125em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* ── Notification banner ── */
+#notification {
+  padding: 8px 16px;
+  font-size: .85rem;
+  line-height: 1.5;
+  background: var(--surface2);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+#notification.success { background: #e8f5e9; color: #1b5e20; border-color: #a5d6a7; }
+#notification.warning { background: #fff8e1; color: #5d4037; border-color: #ffe082; }
+#notification.error   { background: #ffebee; color: #b71c1c; border-color: #ef9a9a; }
+[data-theme="dark"] #notification.success { background: #0a2a0f; color: #a5d6a7; }
+[data-theme="dark"] #notification.warning { background: #2a1c00; color: #ffe082; }
+[data-theme="dark"] #notification.error   { background: #2a0a0a; color: #ef9a9a; }
+#notification .notif-close { margin-left: auto; cursor: pointer; opacity: .6; font-size: 1rem; flex-shrink: 0; line-height: 1; padding: 2px; }
+#notification .notif-close:hover { opacity: 1; }
+
+/* ── Main area ── */
+#main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Called board (bottom strip) ── */
+#board-panel {
+  order: 2;
+  flex-shrink: 0;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  max-height: max(calc(115px * var(--rbs) + 2px), clamp(200px, 13vmin, 420px));
+  overflow-y: auto;
+}
+#board-panel.hidden { display: none; }
+.board-header {
+  padding: 5px 12px 3px;
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+#board-grid {
+  padding: 5px 0 7px;
+  display: flex;
+  gap: 0;
+  width: 100%;
+}
+.board-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 3px;
+  align-content: flex-start;
+  justify-content: center;
+  padding: 4px 6px 6px;
+  border-right: 1px solid var(--border);
+}
+.board-col:last-child { border-right: none; }
+.board-col-header {
+  flex: 0 0 100%;
+  text-align: center;
+  font-weight: 800;
+  font-size: 1.05rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  color: #fff;
+  margin-bottom: 3px;
+}
+.board-cell {
+  font-size: .92rem;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--surface2);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  transition: background .2s, color .2s;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+.board-cell.called {
+  font-weight: 700;
+  color: #fff;
+}
+#board-grid.mode-hidden,
+#recent-balls-strip.mode-hidden { display: none; }
+
+/* ── Recent Balls Strip ── */
+#recent-balls-strip {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  height: calc(115px * var(--rbs));
+  align-items: center;
+  justify-content: center;
+  gap: calc(24px * var(--rbs));
+  padding: calc(8px * var(--rbs)) calc(16px * var(--rbs));
+  flex-shrink: 0;
+}
+.recent-ball-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(4px * var(--rbs));
+  flex-shrink: 0;
+  width: calc(90px * var(--rbs));
+}
+.recent-ball-circle {
+  width: calc(52px * var(--rbs));
+  height: calc(52px * var(--rbs));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(1.6rem * var(--rbs));
+  line-height: 1;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  /* Trim ascender/descender padding so glyphs sit on visual center across all fonts */
+  text-box: trim-both cap alphabetic;
+}
+.recent-ball-circle[data-col="B"] { background: var(--col-B); }
+.recent-ball-circle[data-col="I"] { background: var(--col-I); }
+.recent-ball-circle[data-col="N"] { background: var(--col-N); }
+.recent-ball-circle[data-col="G"] { background: var(--col-G); }
+.recent-ball-circle[data-col="O"] { background: var(--col-O); }
+.recent-ball-label {
+  font-size: calc(0.82rem * var(--rbs));
+  white-space: nowrap;
+  text-align: center;
+  color: var(--text-muted);
+  max-width: calc(90px * var(--rbs));
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes ball-enter {
+  0%   { transform: translateX(calc(-90px * var(--rbs))) scale(0.72); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: translateX(0) scale(1); opacity: 1; }
+}
+@keyframes ball-exit {
+  0%   { opacity: 1; max-width: calc(90px * var(--rbs)); transform: scale(1); }
+  35%  { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 0; max-width: 0px; padding: 0; transform: scale(0.8); }
+}
+.recent-ball-card.ball-entering {
+  animation: ball-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.recent-ball-card.ball-exiting {
+  overflow: hidden;
+  animation: ball-exit 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+/* ── Main ball entrance animations (col-chip) ── */
+@keyframes chip-drop {
+  0%   { transform: translateY(-180%) scale(0.85); opacity: 0; }
+  55%  { transform: translateY(0)      scale(1.00); opacity: 1; }
+  68%  { transform: translateY(0)      scaleX(1.18) scaleY(0.82); }
+  82%  { transform: translateY(-18%)   scaleX(0.94) scaleY(1.08); }
+  100% { transform: translateY(0)      scale(1); }
+}
+.chip-anim-drop { animation: chip-drop 0.62s cubic-bezier(0.33, 0.05, 0.30, 1) both; }
+
+@keyframes chip-pop {
+  0%   { transform: scale(0.30) rotate(-8deg); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+.chip-anim-pop { animation: chip-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes chip-roll {
+  0%   { transform: translateX(-220%) rotate(-540deg) scale(0.8); opacity: 0; }
+  50%  { opacity: 1; }
+  85%  { transform: translateX(0) rotate(20deg) scale(1.04); }
+  100% { transform: translateX(0) rotate(0) scale(1); }
+}
+.chip-anim-roll { animation: chip-roll 0.70s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+
+@keyframes text-rise {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.text-anim-rise { animation: text-rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) 0.18s both; }
+
+/* Pause indicator for auto-advance timer */
+@keyframes pulse-paused {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
+}
+#timer-fill.paused { animation: pulse-paused 1.4s ease-in-out infinite; }
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .chip-anim-drop, .chip-anim-pop, .chip-anim-roll,
+  .text-anim-rise, #timer-fill.paused {
+    animation: none;
+  }
+}
+
+/* ── Problem area ── */
+#problem-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  position: relative;
+}
+#start-prompt {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  text-align: center;
+}
+#start-prompt kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: .95em;
+}
+
+/* ── Problem card ── */
+#problem-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  max-width: clamp(700px, 70vw, 1400px);
+  position: relative;
+}
+#replay-badge {
+  position: absolute;
+  top: -8px;
+  right: 0;
+  background: var(--surface2);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: .78rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+#col-chip {
+  /* Chip letter at 50% of the equation font size; circle is 1.3× that. */
+  font-size: calc(var(--problem-font-size, 4rem) * 0.5);
+  width: 1.3em;
+  height: 1.3em;
+  line-height: 1;
+  font-weight: 900;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  letter-spacing: -.02em;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  /* Trim ascender/descender padding so glyphs sit on visual center across all fonts */
+  text-box: trim-both cap alphabetic;
+}
+#col-chip[data-col="B"] { background: var(--col-B); }
+#col-chip[data-col="I"] { background: var(--col-I); }
+#col-chip[data-col="N"] { background: var(--col-N); }
+#col-chip[data-col="G"] { background: var(--col-G); }
+#col-chip[data-col="O"] { background: var(--col-O); }
+#col-chip.hidden { display: none; }
+
+#problem-text {
+  font-size: var(--problem-font-size, 4rem);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+  letter-spacing: -.01em;
+  color: var(--text);
+  word-break: break-word;
+  transition: color .2s, opacity .2s;
+}
+#problem-card.replay #problem-text { opacity: .55; }
+
+#answer-reveal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#answer-value {
+  font-size: clamp(2rem, calc(var(--problem-font-size, 3rem) * 0.8), 8rem);
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -.02em;
+}
+#answer-value[data-col="B"] { color: var(--col-B); }
+#answer-value[data-col="I"] { color: var(--col-I); }
+#answer-value[data-col="N"] { color: var(--col-N); }
+#answer-value[data-col="G"] { color: var(--col-G); }
+#answer-value[data-col="O"] { color: var(--col-O); }
+
+#game-over-msg {
+  color: var(--text-muted);
+  font-size: 1rem;
+  text-align: center;
+  padding: 10px 20px;
+  background: var(--surface2);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+/* ── Timer ── */
+#timer-container {
+  position: absolute;
+  bottom: 8px;
+  left: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+#timer-track {
+  width: 100%;
+  max-width: 500px;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+#timer-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width .1s linear;
+  width: 100%;
+  margin-left: auto;
+}
+#timer-label {
+  font-size: .78rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Check Answers overlay ── */
+#check-answers-overlay .panel { max-width: 820px; width: 95vw; }
+
+/* Quick checker — 5-column grid so every row aligns with the letter buttons */
+#ca-quick-checker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding: 4px 0 8px;
+}
+/* Wrapper divs become transparent to the grid */
+#ca-col-btns { display: contents; }
+#ca-input-row { display: contents; }
+#ca-btn-row   { display: contents; }
+
+.ca-col-btn {
+  padding: 9px 0; border: none; border-radius: 7px;
+  color: #fff; font-size: 1.15rem; font-weight: 900; cursor: pointer;
+  opacity: .38; transition: opacity .15s, transform .12s, box-shadow .12s;
+}
+.ca-col-btn[data-col="B"] { background: var(--col-B); }
+.ca-col-btn[data-col="I"] { background: var(--col-I); }
+.ca-col-btn[data-col="N"] { background: var(--col-N); }
+.ca-col-btn[data-col="G"] { background: var(--col-G); }
+.ca-col-btn[data-col="O"] { background: var(--col-O); }
+.ca-col-btn.active {
+  opacity: 1; transform: scale(1.1);
+  box-shadow: 0 3px 10px rgba(0,0,0,.28);
+}
+.ca-col-btn:hover:not(.active) { opacity: .65; }
+
+/* Input spans all 5 columns */
+#ca-answer-input {
+  grid-column: 1 / -1;
+  padding: 10px 14px; font-size: 1.1rem;
+  border: 2px solid var(--border); border-radius: 8px;
+  background: var(--surface); color: var(--text);
+  outline: none; transition: border-color .15s;
+  -moz-appearance: textfield;
+}
+#ca-answer-input::-webkit-outer-spin-button,
+#ca-answer-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+#ca-answer-input:focus { border-color: var(--primary); }
+
+/* Status feedback spans all 5 columns, below the input */
+#ca-status {
+  grid-column: 1 / -1;
+  display: none;
+  font-size: .92rem; font-weight: 700; padding: 7px 14px; border-radius: 8px;
+  border: 2px solid transparent; transition: background .18s, color .18s, border-color .18s;
+  text-align: center;
+}
+#ca-status.ca-called, #ca-status.ca-not-called { display: block; }
+#ca-status.ca-called     { background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7; }
+#ca-status.ca-not-called { background: #ffebee; color: #c62828; border-color: #ef9a9a; }
+[data-theme="dark"] #ca-status.ca-called     { background: #1a3a1a; color: #81c784; border-color: #388e3c; }
+[data-theme="dark"] #ca-status.ca-not-called { background: #3a1010; color: #ef9a9a; border-color: #c62828; }
+
+/* Toggle spans 4 columns, Bingo spans 1 — exact same width as one letter button */
+#ca-toggle-full-btn {
+  grid-column: 1 / 5;
+  padding: 7px 12px; font-size: .85rem; border-radius: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text-muted); cursor: pointer; transition: background .15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+#ca-toggle-full-btn:hover { background: var(--border); color: var(--text); }
+#ca-toggle-full-btn .ca-toggle-arrow { transition: transform .2s; display: inline-block; }
+#ca-toggle-full-btn.expanded .ca-toggle-arrow { transform: rotate(180deg); }
+
+#btn-bingo {
+  grid-column: 5 / 6;
+  padding: 7px 4px; font-size: .9rem; font-weight: 800;
+  border-radius: 6px; cursor: pointer; border: 2px solid #b8860b;
+  background: linear-gradient(135deg, #f7b731 0%, #26de81 100%);
+  color: #1a1a00; letter-spacing: .03em;
+  transition: filter .15s, transform .1s;
+}
+#btn-bingo:hover  { filter: brightness(1.08); }
+#btn-bingo:active { transform: scale(.95); }
+#btn-bingo:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+#ca-full-sheet { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+
+/* Full call sheet — same 5-column grid so headers align with letter buttons above */
+#ca-columns {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  overflow-x: auto; padding-bottom: 4px;
+}
+.ca-col {
+  border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.ca-col-header {
+  padding: 8px 0; text-align: center;
+  font-size: 1.05rem; font-weight: 900; color: #fff;
+  letter-spacing: .04em;
+}
+.ca-col-body { padding: 6px 0; }
+.ca-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 4px 10px; gap: 8px; font-size: .88rem;
+}
+.ca-row:nth-child(odd) { background: var(--surface2); }
+.ca-problem { color: var(--text); flex: 1; }
+.ca-answer { font-weight: 700; color: var(--text); white-space: nowrap; }
+.ca-empty { padding: 12px 10px; font-size: .82rem; color: var(--text-muted); font-style: italic; }
+
+/* ── Bottom nav ── */
+#bottom-nav {
+  min-height: var(--bottomnav-h);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  padding-bottom: env(safe-area-inset-bottom);
+  flex-shrink: 0;
+  gap: 12px;
+}
+.nav-btn {
+  padding: 10px 28px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+  transition: background .15s;
+}
+.nav-btn:hover { background: var(--border); }
+.nav-btn.primary {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+.nav-btn.primary:hover { opacity: .88; }
+.nav-btn:disabled { opacity: .35; cursor: default; }
+.nav-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* ── Overlays ── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,.25);
+  max-width: 540px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-header h2 { font-size: 1.1rem; font-weight: 700; }
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.close-btn:hover { background: var(--surface2); color: var(--text); }
+.panel-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* ── Settings panel ── */
+.settings-section { margin-bottom: 20px; }
+.settings-section:last-child { margin-bottom: 0; }
+.settings-label {
+  display: block;
+  font-size: .82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.settings-row label { font-size: .9rem; flex: 1; }
+.file-info {
+  background: var(--surface2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: .83rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.file-info strong { color: var(--text); }
+.seg-group { display: flex; gap: 4px; flex-wrap: wrap; }
+.seg-btn {
+  padding: 5px 12px;
+  font-size: .85rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+  transition: all .15s;
+}
+.seg-btn.active {
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-color: var(--primary);
+}
+.seg-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+select {
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: .9rem;
+  cursor: pointer;
+}
+input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: .9rem;
+  text-decoration: underline;
+  padding: 0;
+}
+.btn-link:hover { opacity: .75; }
+.btn-danger {
+  background: var(--danger);
+  color: var(--danger-fg);
+  border: none;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-danger:hover { opacity: .85; }
+#file-input { display: none; }
+
+/* ── Help / shortcuts ── */
+.shortcuts-table { width: 100%; border-collapse: collapse; }
+.shortcuts-table tr { border-bottom: 1px solid var(--border); }
+.shortcuts-table tr:last-child { border-bottom: none; }
+.shortcuts-table td { padding: 8px 6px; font-size: .9rem; vertical-align: middle; }
+.shortcuts-table td:first-child { white-space: nowrap; }
+kbd {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: .88em;
+  white-space: nowrap;
+}
+
+/* ── Confirm dialog ── */
+.confirm-panel { max-width: 380px; }
+.confirm-panel p { font-size: .95rem; margin-bottom: 18px; }
+.confirm-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+.confirm-buttons button { padding: 8px 18px; border-radius: 6px; font-size: .9rem; cursor: pointer; border: 1px solid var(--border); background: var(--surface2); color: var(--text); }
+.confirm-buttons button:hover { background: var(--border); }
+
+/* ── Utility ── */
+[hidden] { display: none !important; }
+
+/* ── Homepage ── */
+#homepage-view {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  background: var(--bg);
+}
+.hp-inner {
+  max-width: min(1600px, 96vw);
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+#hp-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+#hp-header h1 {
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: var(--text);
+  letter-spacing: -.03em;
+  margin-bottom: 8px;
+}
+#hp-header p { color: var(--text-muted); font-size: 1.05rem; }
+
+.hp-upload-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.hp-btn {
+  padding: 10px 20px;
+  font-size: .95rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  background: var(--surface2);
+  color: var(--text);
+  transition: background .15s;
+  white-space: nowrap;
+}
+.hp-btn:hover { background: var(--border); }
+.hp-btn.primary { background: var(--primary); color: var(--primary-fg); border-color: var(--primary); }
+.hp-btn.primary:hover { opacity: .88; }
+.hp-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+#hp-upload-error {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #ffebee;
+  color: #b71c1c;
+  border-radius: 6px;
+  font-size: .88rem;
+  border: 1px solid #ef9a9a;
+  line-height: 1.5;
+}
+[data-theme="dark"] #hp-upload-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+/* ── Homepage layout ── */
+#hp-tiles {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 4px;
+}
+.hp-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  box-shadow: var(--shadow);
+}
+.hp-tile-actions { border-style: dashed; border-width: 2px; }
+.hp-tile-header {
+  font-size: .75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+/* Search input */
+.hp-search-wrap { margin-bottom: 12px; }
+.hp-search {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: .95rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.hp-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(33,150,243,.15);
+}
+
+/* Grade chips */
+.hp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.hp-chip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.hp-chip:hover { background: var(--surface); color: var(--text); }
+.hp-chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* Sets list — grouped by grade */
+.hp-sets-list { display: flex; flex-direction: column; gap: 18px; }
+.hp-grade-group { display: flex; flex-direction: column; gap: 8px; }
+.hp-grade-label {
+  font-size: .75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+}
+.hp-set-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+}
+.hp-set-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s, background .15s, transform .1s;
+}
+.hp-set-card:hover {
+  border-color: var(--primary);
+  background: var(--col-B-light);
+}
+.hp-set-card:active { transform: translateY(1px); }
+.hp-set-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.hp-set-name {
+  font-size: .92rem;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+}
+.hp-set-std {
+  font-size: .72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tags ★ and [calc] — used in cards and roadmap */
+.hp-tag {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  vertical-align: 1px;
+  margin-left: 2px;
+}
+.tag-fluency { background: #fff3cd; color: #856404; }
+[data-theme="dark"] .tag-fluency { background: #4a3f0d; color: #ffd966; }
+.tag-calc { background: #e3f2fd; color: #1565c0; font-family: monospace; }
+[data-theme="dark"] .tag-calc { background: #0d2a4a; color: #66b3ff; }
+
+/* Empty / roadmap link */
+.hp-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .92rem;
+  line-height: 1.6;
+}
+.hp-empty p { margin: 0; }
+.hp-empty-hint { margin-top: 6px; font-size: .85rem; }
+.hp-link-btn,
+.hp-link-btn-inline {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: inherit;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.hp-link-btn:hover,
+.hp-link-btn-inline:hover { text-decoration: underline; }
+.hp-roadmap-foot {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+/* Roadmap overlay */
+.rm-legend {
+  font-size: .85rem;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.rm-grade { margin-bottom: 22px; }
+.rm-grade-title {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.rm-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rm-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--surface2);
+  font-size: .9rem;
+}
+.rm-row.rm-ready-row {
+  background: var(--col-B-light);
+  border-left: 3px solid var(--primary);
+}
+.rm-name { color: var(--text); line-height: 1.35; }
+.rm-std {
+  font-size: .75rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rm-status {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.rm-ready { background: #c8e6c9; color: #2e7d32; }
+[data-theme="dark"] .rm-ready { background: #1b3d1f; color: #81c784; }
+.rm-soon { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); }
+
+/* Back button — only shown in caller view */
+#btn-back-home { margin-right: 4px; }
+
+/* ── Fullscreen button ── */
+#btn-fullscreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 8px;
+  opacity: .6;
+  transition: opacity .15s;
+}
+#btn-fullscreen:hover { opacity: 1; }
+#btn-fullscreen svg { display: block; }
+
+#hp-set-error {
+  margin-top: 12px; padding: 8px 12px;
+  background: #ffebee; color: #b71c1c;
+  border-radius: 6px; font-size: .88rem;
+  border: 1px solid #ef9a9a; line-height: 1.5;
+}
+[data-theme="dark"] #hp-set-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+/* ── Advanced Options dropdown ── */
+#pv-advanced { border: none; }
+#pv-advanced > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+#pv-advanced > summary::-webkit-details-marker { display: none; }
+.pv-adv-arrow { color: var(--text-muted); transition: transform .15s; }
+#pv-advanced[open] .pv-adv-arrow { transform: rotate(90deg); }
+.pv-advanced-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 12px;
+}
+.pv-adv-sublabel {
+  display: block;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* ── Color pickers ── */
+#pv-color-pickers { display: flex; flex-direction: column; gap: 7px; }
+.pv-color-row { display: flex; align-items: center; gap: 8px; }
+.pv-color-col-label {
+  width: 24px; height: 24px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: .82rem; color: #fff; flex-shrink: 0;
+}
+.pv-color-input {
+  width: 36px; height: 28px; padding: 1px 2px;
+  border: 1px solid var(--border); border-radius: 5px;
+  cursor: pointer; background: var(--surface2);
+}
+.pv-color-reset {
+  font-size: .8rem; padding: 3px 7px;
+  opacity: .7;
+}
+.pv-color-reset:hover { opacity: 1; }
+
+/* ── Print view shell ── */
+#print-view {
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+  background: var(--bg); overflow: hidden;
+}
+#pv-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; height: var(--topbar-h);
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow); flex-shrink: 0;
+}
+#pv-title {
+  flex: 1; font-weight: 700; font-size: .95rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#pv-host-error {
+  font-size: .82rem; color: #c62828; font-weight: 600;
+  white-space: nowrap; opacity: 0; transition: opacity .3s;
+  pointer-events: none;
+}
+#pv-host-error.visible { opacity: 1; }
+#pv-host-btn, #pv-save-csv-btn { min-width: 148px; flex-shrink: 0; }
+#pv-body {
+  display: flex; flex: 1; overflow: hidden; gap: 0;
+}
+
+/* ── Options panel ── */
+#pv-options {
+  width: 280px; flex-shrink: 0; overflow-y: auto;
+  padding: 20px 20px 24px;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex; flex-direction: column; gap: 20px;
+}
+.pv-opt-label {
+  display: block; font-size: .78rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-muted); margin-bottom: 8px;
+}
+#pv-count {
+  width: 80px; padding: 7px 10px; font-size: .95rem; font-weight: 600;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text); text-align: center;
+}
+#pv-style-picker { display: flex; flex-direction: column; gap: 8px; }
+.pv-style-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+  border: 2px solid var(--border); background: var(--surface2);
+  transition: border-color .15s, background .15s;
+}
+.pv-style-card.active { border-color: var(--primary); background: var(--col-B-light); }
+.pv-style-card span { font-size: .88rem; font-weight: 600; }
+.pv-style-card small { display: block; font-size: .75rem; color: var(--text-muted); }
+.pv-style-thumb {
+  width: 54px; height: 42px; border: 1px solid var(--border);
+  border-radius: 3px; flex-shrink: 0; background: white;
+  overflow: hidden;
+}
+.pv-style-card[data-pv-style="full"] .pv-style-thumb {
+  width: 32px; height: 42px;
+}
+.pv-style-thumb svg { display: block; }
+#pv-work-thumb { display: block; }
+#pv-dl-error {
+  padding: 8px 12px; background: #ffebee; color: #b71c1c;
+  border-radius: 6px; font-size: .85rem;
+  border: 1px solid #ef9a9a;
+}
+[data-theme="dark"] #pv-dl-error { background: #2a0a0a; color: #ef9a9a; border-color: #7f1f1f; }
+
+/* ── Preview panel ── */
+#pv-preview {
+  flex: 1; overflow: hidden; display: flex; flex-direction: column; padding: 0;
+}
+#pv-problems-table { flex: 1; overflow-y: auto; padding: 0 16px 12px; }
+.pv-preview-header {
+  font-size: .78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-muted); margin-bottom: 12px;
+}
+#pv-problems-table table {
+  width: 100%; border-collapse: collapse; font-size: .88rem;
+}
+#pv-problems-table th {
+  text-align: left; padding: 5px 10px; font-size: .75rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .05em; color: #fff;
+}
+#pv-load-error {
+  padding: 10px 14px; background: #fff8e1; color: #6d4c00;
+  border-radius: 6px; font-size: .85rem; border: 1px solid #ffe082;
+  margin: 10px 16px; white-space: pre-wrap;
+}
+[data-theme="dark"] #pv-load-error { background: #2a2000; color: #ffe082; border-color: #7a6000; }
+#pv-problems-table td {
+  padding: 5px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+#pv-problems-table tr:last-child td { border-bottom: none; }
+
+/* ── Set editor: preview pane topbar ── */
+#pv-preview-topbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 16px; border-bottom: 1px solid var(--border);
+  background: var(--surface); flex-shrink: 0;
+}
+#pv-col-counts { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; flex-shrink: 0; }
+#pv-topbar-msg { flex: 1; font-size: .78rem; color: var(--text-muted); line-height: 1.4; }
+.pv-col-count {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 7px 2px 6px; border-radius: 12px;
+  color: #fff; font-size: .78rem; font-weight: 700;
+  white-space: nowrap; line-height: 1.4;
+}
+.pv-col-count strong { font-size: .85rem; font-weight: 800; }
+.pv-col-warn-icon { font-size: .72rem; opacity: .9; }
+.pv-col-warn { outline: 2px solid rgba(255,220,0,0.8); outline-offset: -2px; }
+
+/* ── Set editor: editable table ── */
+#pv-edit-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+#pv-edit-table th {
+  text-align: left; padding: 5px 8px; background: var(--text-muted);
+  color: #fff; font-size: .75rem; position: sticky; top: 0; z-index: 1;
+}
+#pv-edit-table td { padding: 3px 4px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.pv-edit-row.pv-row-error > td { background: #fff0f0; }
+[data-theme="dark"] .pv-edit-row.pv-row-error > td { background: #2d1010; }
+.pv-row-errors { margin-top: 3px; }
+.pv-row-error-msg {
+  font-size: .72rem; color: #c62828; font-weight: 600; line-height: 1.5;
+}
+.pv-col-select {
+  width: 52px; padding: 3px 2px; border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 4px; background: rgba(255,255,255,0.82); color: #222;
+  font-size: .88rem; font-weight: 700; text-align: center; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.pv-col-select:hover {
+  background: rgba(255,255,255,0.96); border-color: rgba(0,0,0,0.35);
+}
+.pv-col-select:focus {
+  outline: 2px solid var(--primary); outline-offset: 1px;
+}
+.pv-prob-input, .pv-ans-input {
+  width: 100%; box-sizing: border-box; padding: 3px 6px;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--surface); color: var(--text); font-size: .85rem;
+}
+.pv-prob-input.input-error, .pv-ans-input.input-error, .pv-col-select.input-error {
+  border-color: #c62828; background: #fff5f5;
+}
+[data-theme="dark"] .pv-prob-input.input-error,
+[data-theme="dark"] .pv-ans-input.input-error { background: #2d1010; }
+.pv-prob-preview {
+  min-height: 20px; font-size: .82rem; color: var(--text-muted);
+  padding: 2px 0 1px; overflow: hidden;
+}
+.pv-prob-preview.preview-error { color: #c62828; font-size: .75rem; }
+.pv-del-btn { padding: 2px 6px; font-size: .85rem; line-height: 1; opacity: .5; }
+.pv-del-btn:hover { opacity: 1; color: #c62828; }
+#pv-add-row-row td { padding: 6px 4px; }
+#pv-add-row-btn { width: 100%; }
+</style>
+</head>
+<body>
+
+<!-- Hidden SVG icon symbol defs (Feather Icons, MIT licence) -->
+<svg xmlns="http://www.w3.org/2000/svg" hidden aria-hidden="true" style="display:none">
+  <symbol id="icon-chevron-left"  viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></symbol>
+  <symbol id="icon-chevron-right" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></symbol>
+  <symbol id="icon-chevron-down"  viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></symbol>
+  <symbol id="icon-download"      viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="icon-settings"      viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="icon-x"             viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="icon-rotate-ccw"    viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.51"/></symbol>
+  <symbol id="icon-refresh-cw"    viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.49-3.51"/></symbol>
+  <symbol id="icon-alert-triangle" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></symbol>
+  <symbol id="icon-upload"         viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></symbol>
+  <symbol id="icon-file-plus"      viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></symbol>
+</svg>
+
+<!-- ═══════════════════════════════════════════════════
+     HOMEPAGE VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="homepage-view">
+  <div class="hp-inner">
+    <div id="hp-header">
+      <h1>Math Bingo</h1>
+      <p>Pick a set to play, or create your own.</p>
+    </div>
+
+    <div id="hp-tiles"><!-- rendered by renderHomepage() --></div>
+    <div id="hp-set-error" hidden></div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     PRINT VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="print-view" hidden>
+  <div id="pv-topbar">
+    <button class="icon-btn" id="pv-back-btn"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-left"/></svg> Back</button>
+    <span id="pv-title"></span>
+    <span id="pv-host-error"></span>
+    <button class="hp-btn primary" id="pv-host-btn">Host Game <svg class="icon" aria-hidden="true"><use href="#icon-chevron-right"/></svg></button>
+  </div>
+  <div id="pv-body">
+    <!-- Left: options + download -->
+    <div id="pv-options">
+      <div class="pv-opt-group">
+        <label class="pv-opt-label">Number of cards</label>
+        <input id="pv-count" type="number" min="1" max="200" value="30">
+      </div>
+      <div class="pv-opt-group">
+        <label class="pv-opt-label">Card style</label>
+        <div id="pv-style-picker">
+          <label class="pv-style-card active" data-pv-style="full">
+            <!-- Full Page: portrait thumb (32×42) with one centered card (22×27, colW=4.4) -->
+            <svg class="pv-style-thumb" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+              <rect x="5" y="7" width="22" height="27" rx="1" fill="white" stroke="#bbb" stroke-width="0.6"/>
+              <clipPath id="cp-full"><rect x="5" y="7" width="22" height="27"/></clipPath>
+              <g clip-path="url(#cp-full)">
+                <rect x="5"    y="7" width="4.4" height="5" style="fill:var(--col-B)"/>
+                <rect x="9.4"  y="7" width="4.4" height="5" style="fill:var(--col-I)"/>
+                <rect x="13.8" y="7" width="4.4" height="5" style="fill:var(--col-N)"/>
+                <rect x="18.2" y="7" width="4.4" height="5" style="fill:var(--col-G)"/>
+                <rect x="22.6" y="7" width="4.4" height="5" style="fill:var(--col-O)"/>
+                <line x1="9.4"  y1="12" x2="9.4"  y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="13.8" y1="12" x2="13.8" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="18.2" y1="12" x2="18.2" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="22.6" y1="12" x2="22.6" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="5" y1="16.4" x2="27" y2="16.4" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="5" y1="20.8" x2="27" y2="20.8" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="5" y1="25.2" x2="27" y2="25.2" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="5" y1="29.6" x2="27" y2="29.6" stroke="#ddd" stroke-width="0.5"/>
+              </g>
+            </svg>
+            <div><span>Full Page</span><small>1 per page · portrait</small></div>
+          </label>
+          <label class="pv-style-card" data-pv-style="half">
+            <!-- Half-Page: two portrait cards side by side, square cells (colW=4.4) -->
+            <svg class="pv-style-thumb" viewBox="0 0 54 42" xmlns="http://www.w3.org/2000/svg">
+              <clipPath id="cp-h1"><rect x="2"  y="7" width="22" height="27" rx="1"/></clipPath>
+              <clipPath id="cp-h2"><rect x="30" y="7" width="22" height="27" rx="1"/></clipPath>
+              <rect x="2"  y="7" width="22" height="27" rx="1" fill="white" stroke="#ccc" stroke-width="0.6"/>
+              <rect x="30" y="7" width="22" height="27" rx="1" fill="white" stroke="#ccc" stroke-width="0.6"/>
+              <g clip-path="url(#cp-h1)">
+                <rect x="2"    y="7" width="4.4" height="5" style="fill:var(--col-B)"/>
+                <rect x="6.4"  y="7" width="4.4" height="5" style="fill:var(--col-I)"/>
+                <rect x="10.8" y="7" width="4.4" height="5" style="fill:var(--col-N)"/>
+                <rect x="15.2" y="7" width="4.4" height="5" style="fill:var(--col-G)"/>
+                <rect x="19.6" y="7" width="4.4" height="5" style="fill:var(--col-O)"/>
+                <line x1="6.4"  y1="12" x2="6.4"  y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="10.8" y1="12" x2="10.8" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="15.2" y1="12" x2="15.2" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="19.6" y1="12" x2="19.6" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="2" y1="16.4" x2="24" y2="16.4" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="2" y1="20.8" x2="24" y2="20.8" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="2" y1="25.2" x2="24" y2="25.2" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="2" y1="29.6" x2="24" y2="29.6" stroke="#ddd" stroke-width="0.5"/>
+              </g>
+              <g clip-path="url(#cp-h2)">
+                <rect x="30"   y="7" width="4.4" height="5" style="fill:var(--col-B)"/>
+                <rect x="34.4" y="7" width="4.4" height="5" style="fill:var(--col-I)"/>
+                <rect x="38.8" y="7" width="4.4" height="5" style="fill:var(--col-N)"/>
+                <rect x="43.2" y="7" width="4.4" height="5" style="fill:var(--col-G)"/>
+                <rect x="47.6" y="7" width="4.4" height="5" style="fill:var(--col-O)"/>
+                <line x1="34.4" y1="12" x2="34.4" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="38.8" y1="12" x2="38.8" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="43.2" y1="12" x2="43.2" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="47.6" y1="12" x2="47.6" y2="34" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="30" y1="16.4" x2="52" y2="16.4" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="30" y1="20.8" x2="52" y2="20.8" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="30" y1="25.2" x2="52" y2="25.2" stroke="#ddd" stroke-width="0.5"/>
+                <line x1="30" y1="29.6" x2="52" y2="29.6" stroke="#ddd" stroke-width="0.5"/>
+              </g>
+            </svg>
+            <div><span>Half-Page</span><small>2 per page · landscape</small></div>
+          </label>
+          <label class="pv-style-card" data-pv-style="work">
+            <!-- Work Area: canvas updated live by updateWorkThumb() -->
+            <canvas class="pv-style-thumb" id="pv-work-thumb"></canvas>
+            <div><span>Work Area</span><small>2 per page · work space</small></div>
+          </label>
+        </div>
+      </div>
+      <div class="pv-opt-group" id="pv-colors-group">
+        <label class="pv-opt-label">Card Colors</label>
+        <div class="seg-group" style="margin-bottom:8px">
+          <button class="seg-btn active" data-pv-color="color">Color</button>
+          <button class="seg-btn" data-pv-color="bw">Black &amp; White</button>
+        </div>
+        <div id="pv-color-pickers">
+          <div class="pv-color-row" data-col="B">
+            <span class="pv-color-col-label" style="background:#1565c0">B</span>
+            <input type="color" class="pv-color-input" id="pv-color-B" value="#1565c0">
+            <button class="pv-color-reset icon-btn" title="Reset to default"><svg class="icon" aria-hidden="true"><use href="#icon-rotate-ccw"/></svg></button>
+          </div>
+          <div class="pv-color-row" data-col="I">
+            <span class="pv-color-col-label" style="background:#2e7d32">I</span>
+            <input type="color" class="pv-color-input" id="pv-color-I" value="#2e7d32">
+            <button class="pv-color-reset icon-btn" title="Reset to default"><svg class="icon" aria-hidden="true"><use href="#icon-rotate-ccw"/></svg></button>
+          </div>
+          <div class="pv-color-row" data-col="N">
+            <span class="pv-color-col-label" style="background:#e65100">N</span>
+            <input type="color" class="pv-color-input" id="pv-color-N" value="#e65100">
+            <button class="pv-color-reset icon-btn" title="Reset to default"><svg class="icon" aria-hidden="true"><use href="#icon-rotate-ccw"/></svg></button>
+          </div>
+          <div class="pv-color-row" data-col="G">
+            <span class="pv-color-col-label" style="background:#6a1b9a">G</span>
+            <input type="color" class="pv-color-input" id="pv-color-G" value="#6a1b9a">
+            <button class="pv-color-reset icon-btn" title="Reset to default"><svg class="icon" aria-hidden="true"><use href="#icon-rotate-ccw"/></svg></button>
+          </div>
+          <div class="pv-color-row" data-col="O">
+            <span class="pv-color-col-label" style="background:#b71c1c">O</span>
+            <input type="color" class="pv-color-input" id="pv-color-O" value="#b71c1c">
+            <button class="pv-color-reset icon-btn" title="Reset to default"><svg class="icon" aria-hidden="true"><use href="#icon-rotate-ccw"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <details id="pv-advanced">
+        <summary class="pv-opt-label pv-advanced-summary">Advanced Options <svg class="icon pv-adv-arrow" aria-hidden="true"><use href="#icon-chevron-right"/></svg></summary>
+        <div class="pv-advanced-body">
+          <div>
+            <label class="pv-adv-sublabel">Card label</label>
+            <div class="settings-row">
+              <label for="pv-show-numbers" style="font-size:.9rem;cursor:pointer">Show card number at bottom</label>
+              <input type="checkbox" id="pv-show-numbers" checked>
+            </div>
+          </div>
+          <div>
+            <label class="pv-adv-sublabel">Font</label>
+            <select id="pv-font-select" class="pv-input" style="width:100%"></select>
+          </div>
+          <div>
+            <label class="pv-adv-sublabel">Work area style</label>
+            <div class="seg-group" id="pv-work-picker">
+              <button class="seg-btn active" data-pv-work="lined">Lined</button>
+              <button class="seg-btn" data-pv-work="grid">Grid</button>
+              <button class="seg-btn" data-pv-work="blank">Blank</button>
+            </div>
+          </div>
+          <div id="pv-work-scale-row">
+            <label class="pv-adv-sublabel">Line spacing</label>
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div style="flex:1">
+                <input type="range" id="pv-work-scale" min="3" max="15" step="0.5" value="7"
+                  style="width:100%;accent-color:var(--primary);margin-bottom:2px">
+                <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-muted)">
+                  <span>Fine</span>
+                  <span id="pv-work-scale-val" style="font-weight:700;color:var(--text)">7 mm</span>
+                  <span>Wide</span>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+                <canvas id="pv-work-preview" width="96" height="68"
+                  style="border:1px solid var(--border);border-radius:4px;background:#fff"></canvas>
+                <button class="pv-color-reset icon-btn" id="pv-work-scale-reset" title="Reset to default" style="align-self:center"><svg class="icon" aria-hidden="true"><use href="#icon-rotate-ccw"/></svg> Reset</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label class="pv-adv-sublabel">Caller sheet</label>
+            <div class="settings-row">
+              <label for="pv-caller-sheet" style="font-size:.9rem;cursor:pointer">Include caller sheet in PDF</label>
+              <input type="checkbox" id="pv-caller-sheet" checked>
+            </div>
+          </div>
+        </div>
+      </details>
+      <button class="hp-btn primary" id="pv-download-btn"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg> Download Cards</button>
+      <div id="pv-dl-error" hidden></div>
+    </div>
+    <!-- Right: problem/answer preview (always-editable) -->
+    <div id="pv-preview">
+      <div id="pv-preview-topbar">
+        <div id="pv-col-counts"></div>
+        <span id="pv-topbar-msg"></span>
+        <button class="hp-btn" id="pv-save-csv-btn"><svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg> Save as CSV</button>
+      </div>
+      <div id="pv-load-error" hidden></div>
+      <div id="pv-problems-table"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     CALLER VIEW
+     ═══════════════════════════════════════════════════ -->
+<div id="app" hidden>
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <button class="icon-btn" id="btn-back-home"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-left"/></svg> Sets</button>
+    <button class="icon-btn" id="btn-settings"><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg> Settings</button>
+    <div class="spacer"></div>
+    <div class="center" id="progress-display"></div>
+    <div class="spacer"></div>
+    <div class="topbar-right">
+      <button class="icon-btn" id="btn-help" title="Keyboard shortcuts (?)">Help</button>
+      <button class="icon-btn" id="btn-fullscreen" title="Fullscreen (F)" aria-label="Enter fullscreen">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 5V1h4M9 1h4v4M1 9v4h4M13 9v4H9"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Notification banner -->
+  <div id="notification" hidden></div>
+
+  <!-- Main content -->
+  <div id="main">
+
+    <!-- Called numbers board -->
+    <div id="board-panel">
+      <div id="board-grid"></div>
+      <div id="recent-balls-strip" class="mode-hidden"></div>
+    </div>
+
+    <!-- Problem display -->
+    <div id="problem-area">
+      <div id="start-prompt">Press <kbd>Space</kbd> or click <strong>Next <svg class="icon" aria-hidden="true"><use href="#icon-chevron-right"/></svg></strong> to begin</div>
+
+      <div id="problem-card" hidden>
+        <div id="replay-badge" hidden><svg class="icon" aria-hidden="true"><use href="#icon-refresh-cw"/></svg> REPLAY</div>
+        <div id="col-chip"></div>
+        <div id="problem-text"></div>
+        <div id="answer-reveal" hidden>
+          <div id="answer-value"></div>
+        </div>
+        <div id="game-over-msg" hidden>All answers called! Press <kbd>R</kbd> to start a new game.</div>
+      </div>
+
+      <div id="timer-container" hidden>
+        <div id="timer-track"><div id="timer-fill"></div></div>
+        <div id="timer-label"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom nav -->
+  <div id="bottom-nav">
+    <button class="nav-btn" id="btn-prev"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-left"/></svg> Back</button>
+    <button class="nav-btn" id="btn-check-answers">Check Answers</button>
+    <button class="nav-btn primary" id="btn-next">Next <svg class="icon" aria-hidden="true"><use href="#icon-chevron-right"/></svg></button>
+  </div>
+
+</div>
+
+<!-- Check Answers overlay -->
+<div class="overlay" id="check-answers-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Check Answer</h2>
+      <button class="close-btn" id="btn-close-check-answers" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="panel-body">
+      <!-- Quick checker -->
+      <div id="ca-quick-checker">
+        <div id="ca-col-btns">
+          <button class="ca-col-btn active" data-col="B">B</button>
+          <button class="ca-col-btn" data-col="I">I</button>
+          <button class="ca-col-btn" data-col="N">N</button>
+          <button class="ca-col-btn" data-col="G">G</button>
+          <button class="ca-col-btn" data-col="O">O</button>
+        </div>
+        <div id="ca-input-row">
+          <input id="ca-answer-input" type="number" placeholder="Enter answer…" autocomplete="off" step="any">
+          <span id="ca-status"></span>
+        </div>
+        <div id="ca-btn-row">
+          <button id="ca-toggle-full-btn">
+            <span>Show full call sheet</span>
+            <span class="ca-toggle-arrow"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-down"/></svg></span>
+          </button>
+          <button id="btn-bingo">Bingo!</button>
+        </div>
+      </div>
+      <!-- Collapsible full call sheet -->
+      <div id="ca-full-sheet" hidden>
+        <div id="ca-columns"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings overlay -->
+<div class="overlay" id="settings-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2><svg class="icon" aria-hidden="true"><use href="#icon-settings"/></svg> Settings</h2>
+      <button class="close-btn" id="btn-close-settings" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="panel-body" id="settings-body"></div>
+  </div>
+</div>
+
+<!-- Help overlay -->
+<div class="overlay" id="help-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2>? Keyboard Shortcuts</h2>
+      <button class="close-btn" id="btn-close-help" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="panel-body">
+      <table class="shortcuts-table">
+        <tr><td><kbd>Space</kbd> / <kbd>→</kbd></td><td>Next problem</td></tr>
+        <tr><td><kbd>←</kbd></td><td>Previous problem (re-read)</td></tr>
+        <tr><td><kbd>↑</kbd></td><td>Toggle answer visibility</td></tr>
+        <tr><td><kbd>P</kbd></td><td>Pause / resume auto-advance timer</td></tr>
+        <tr><td><kbd>B</kbd></td><td>Toggle called-numbers board</td></tr>
+        <tr><td><kbd>K</kbd></td><td>Toggle board style (Grid / Recent Balls)</td></tr>
+        <tr><td><kbd>R</kbd></td><td>Reset game (with confirmation)</td></tr>
+        <tr><td><kbd>S</kbd></td><td>Open / close settings</td></tr>
+        <tr><td><kbd>A</kbd></td><td>View called answers</td></tr>
+        <tr><td><kbd>F</kbd></td><td>Toggle fullscreen</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Close panel / exit fullscreen</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm dialog -->
+<div class="overlay" id="confirm-overlay" hidden>
+  <div class="panel confirm-panel">
+    <div class="panel-header"><h2>Reset Game?</h2></div>
+    <div class="panel-body">
+      <p>This will clear all called numbers and reshuffle. Are you sure?</p>
+      <div class="confirm-buttons">
+        <button id="confirm-yes" class="btn-danger">Yes, Reset</button>
+        <button id="confirm-no">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CSV Format Help overlay -->
+<div class="overlay" id="csv-help-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2>CSV Format Guide</h2>
+      <button class="close-btn" id="btn-close-csv-help" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="panel-body">
+      <p style="margin-bottom:12px;font-size:.93rem;">Your CSV file must have three columns with these exact headers:</p>
+      <table class="shortcuts-table" style="margin-bottom:16px;">
+        <tr><td><strong>column</strong></td><td>One of <kbd>B</kbd> <kbd>I</kbd> <kbd>N</kbd> <kbd>G</kbd> <kbd>O</kbd></td></tr>
+        <tr><td><strong>problem</strong></td><td>The problem text shown on screen (e.g. <em>-4 + 3</em>)</td></tr>
+        <tr><td><strong>answer</strong></td><td>A numeric answer students mark on their card (e.g. <em>-1</em>)</td></tr>
+      </table>
+      <p style="margin-bottom:8px;font-size:.85rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Example</p>
+      <pre style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px 14px;font-size:.85rem;overflow-x:auto;line-height:1.6;">column,problem,answer
+B,-10 + (-15),-25
+B,-8 + (-12),-20
+I,-7 + (-6),-13
+N,-4 + 3,-1
+G,4 + 5,9
+O,20 + (-3),17</pre>
+      <p style="margin-top:14px;font-size:.87rem;color:var(--text-muted);line-height:1.6;">
+        Each column needs at least <strong>5 distinct answer values</strong> for bingo cards to work.<br>
+        Answer ranges should not overlap between columns.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Topic roadmap overlay -->
+<div class="overlay" id="roadmap-overlay" hidden>
+  <div class="panel">
+    <div class="panel-header">
+      <h2>Topic Roadmap</h2>
+      <button class="close-btn" id="btn-close-roadmap" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#icon-x"/></svg></button>
+    </div>
+    <div class="panel-body">
+      <p class="rm-legend"><span class="hp-tag tag-fluency">★</span> = CCSS fluency standard &nbsp; <span class="hp-tag tag-calc">[calc]</span> = calculator recommended</p>
+      <div id="roadmap-body"></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".csv">
+
+<script>
+'use strict';
+
+/* ============================================================
+   DEFAULT PROBLEMS (80 integer addition/subtraction problems)
+   Columns: B(-25 to -16), I(-15 to -6), N(-5 to 5), G(6-15), O(16-25)
+   ============================================================ */
+/* ============================================================
+   PRE-BUILT BINGO SETS  (add set objects as { name, path } to fill in later)
+   ============================================================ */
+/* Master topic list. Each entry:
+   { gk: gradeKey, g: gradeLabel, n: name, s: standard, f?: fluency★, c?: [calc], path?: csvPath }
+   `path` present ⇒ topic is playable today; absent ⇒ on the roadmap. */
+const GRADE_ORDER = ['K','1','2','3','4','5','6','7','8','Pre-Algebra','Algebra I','Geometry','Algebra II','Pre-Calculus','Calculus','Statistics'];
+const GRADE_LABELS = {
+  'K': 'Kindergarten', '1': 'Grade 1', '2': 'Grade 2', '3': 'Grade 3', '4': 'Grade 4',
+  '5': 'Grade 5', '6': 'Grade 6', '7': 'Grade 7', '8': 'Grade 8',
+  'Pre-Algebra': 'Pre-Algebra', 'Algebra I': 'Algebra I', 'Geometry': 'Geometry',
+  'Algebra II': 'Algebra II', 'Pre-Calculus': 'Pre-Calculus', 'Calculus': 'Calculus',
+  'Statistics': 'Statistics',
+};
+const GRADE_CHIP_LABELS = {
+  'K': 'K', '1': '1', '2': '2', '3': '3', '4': '4', '5': '5', '6': '6', '7': '7', '8': '8',
+  'Pre-Algebra': 'Pre-A', 'Algebra I': 'Alg I', 'Geometry': 'Geo',
+  'Algebra II': 'Alg II', 'Pre-Calculus': 'Pre-C', 'Calculus': 'Calc', 'Statistics': 'Stats',
+};
+const TOPICS = [
+  // Kindergarten
+  { gk:'K', n:'Addition within 10', s:'K.OA.5', f:1 },
+  { gk:'K', n:'Subtraction within 10', s:'K.OA.5', f:1 },
+  { gk:'K', n:'Decomposing teen numbers', s:'K.NBT.1' },
+  { gk:'K', n:'One more / one less', s:'K.CC.4c' },
+  // Grade 1
+  { gk:'1', n:'Addition within 20 — Level A: sums to 10', s:'1.OA.6', f:1 },
+  { gk:'1', n:'Addition within 20 — Level B: sums 11–20', s:'1.OA.6', f:1 },
+  { gk:'1', n:'Subtraction within 20 — Level A: minuends to 10', s:'1.OA.6', f:1 },
+  { gk:'1', n:'Subtraction within 20 — Level B: minuends 11–20', s:'1.OA.6', f:1 },
+  { gk:'1', n:'10 more / 10 less mentally', s:'1.NBT.5' },
+  { gk:'1', n:'Two-digit plus one-digit', s:'1.NBT.4' },
+  { gk:'1', n:'Missing addend (e.g. 6 + ? = 13)', s:'1.OA.8' },
+  // Grade 2
+  { gk:'2', n:'Addition & subtraction — Level A: within 50', s:'2.NBT.5', f:1 },
+  { gk:'2', n:'Addition & subtraction — Level B: within 100', s:'2.NBT.5', f:1 },
+  { gk:'2', n:'Place value identification', s:'2.NBT.1' },
+  { gk:'2', n:'Money totals in cents', s:'2.MD.8' },
+  { gk:'2', n:'Skip counting fill-in', s:'2.NBT.2' },
+  // Grade 3
+  { gk:'3', n:'Multiplication facts within 100', s:'3.OA.7', f:1 },
+  { gk:'3', n:'Division facts within 100', s:'3.OA.7', f:1 },
+  { gk:'3', n:'Addition & subtraction within 1000', s:'3.NBT.2', f:1 },
+  { gk:'3', n:'Rounding to nearest 10 or 100', s:'3.NBT.1' },
+  { gk:'3', n:'Area of a rectangle', s:'3.MD.7' },
+  { gk:'3', n:'Perimeter given side lengths', s:'3.MD.8' },
+  { gk:'3', n:'Multiplying by multiples of 10', s:'3.NBT.3' },
+  { gk:'3', n:'Equivalent fractions, missing numerator', s:'3.NF.3b' },
+  // Grade 4
+  { gk:'4', n:'Multi-digit addition/subtraction', s:'4.NBT.4', f:1 },
+  { gk:'4', n:'Multi-digit multiplication — Level A: 2-digit × 1-digit', s:'4.NBT.5' },
+  { gk:'4', n:'Multi-digit multiplication — Level B: 2-digit × 2-digit', s:'4.NBT.5' },
+  { gk:'4', n:'Division with one-digit divisor', s:'4.NBT.6' },
+  { gk:'4', n:'Like-denominator fraction add/subtract', s:'4.NF.3' },
+  { gk:'4', n:'Fraction × whole number', s:'4.NF.4' },
+  { gk:'4', n:'Decimal-fraction conversion (tenths/hundredths)', s:'4.NF.6' },
+  { gk:'4', n:'Angle additivity', s:'4.MD.7' },
+  { gk:'4', n:'Unit conversion', s:'4.MD.1' },
+  // Grade 5
+  { gk:'5', n:'Decimal addition/subtraction', s:'5.NBT.7' },
+  { gk:'5', n:'Decimal multiplication (small numbers)', s:'5.NBT.7' },
+  { gk:'5', n:'Fraction × fraction', s:'5.NF.4' },
+  { gk:'5', n:'Fraction ÷ whole, whole ÷ unit fraction', s:'5.NF.7' },
+  { gk:'5', n:'Volume of rectangular prisms', s:'5.MD.5' },
+  { gk:'5', n:'Powers of 10', s:'5.NBT.2' },
+  { gk:'5', n:'Order of operations evaluation', s:'5.OA.1' },
+  // Grade 6
+  { gk:'6', n:'Dividing fractions by fractions', s:'6.NS.1' },
+  { gk:'6', n:'GCF and LCM (numbers ≤ 100)', s:'6.NS.4' },
+  { gk:'6', n:'Absolute value', s:'6.NS.7c' },
+  { gk:'6', n:'Unit rates', s:'6.RP.2' },
+  { gk:'6', n:'Percent of a quantity', s:'6.RP.3c' },
+  { gk:'6', n:'Evaluating expressions', s:'6.EE.2c' },
+  { gk:'6', n:'One-step equations', s:'6.EE.7' },
+  { gk:'6', n:'Area of triangles, parallelograms, trapezoids', s:'6.G.1' },
+  // Grade 7 — our existing 3 sets live here under Level A: integers
+  { gk:'7', n:'Adding/subtracting rational numbers — Level A: integers (addition only)', s:'7.NS.1', path:'sets/grade-6/integer-operations-addition.csv' },
+  { gk:'7', n:'Adding/subtracting rational numbers — Level A: integers (subtraction only)', s:'7.NS.1', path:'sets/grade-6/integer-operations-subtraction.csv' },
+  { gk:'7', n:'Adding/subtracting rational numbers — Level A: integers (mixed)', s:'7.NS.1', path:'sets/grade-6/integer-operations-addition-subtraction.csv' },
+  { gk:'7', n:'Adding/subtracting rational numbers — Level B: rationals', s:'7.NS.1' },
+  { gk:'7', n:'Multiplying/dividing rational numbers — Level A: integers', s:'7.NS.2' },
+  { gk:'7', n:'Multiplying/dividing rational numbers — Level B: rationals', s:'7.NS.2' },
+  { gk:'7', n:'Two-step equations', s:'7.EE.4a' },
+  { gk:'7', n:'Circle area and circumference (in terms of π)', s:'7.G.4' },
+  { gk:'7', n:'Simple probability', s:'7.SP.5' },
+  { gk:'7', n:'Angle relationships (complementary, supplementary, vertical)', s:'7.G.5' },
+  // Grade 8
+  { gk:'8', n:'Integer exponent rules', s:'8.EE.1' },
+  { gk:'8', n:'Square and cube roots — Level A: perfect squares to 225', s:'8.EE.2' },
+  { gk:'8', n:'Square and cube roots — Level B: perfect cubes to 1000', s:'8.EE.2' },
+  { gk:'8', n:'Scientific notation operations', s:'8.EE.4', c:1 },
+  { gk:'8', n:'Slope from two points', s:'8.EE.6' },
+  { gk:'8', n:'Linear equations with variables on both sides', s:'8.EE.7' },
+  { gk:'8', n:'Pythagorean theorem with integer triples', s:'8.G.7' },
+  { gk:'8', n:'Function evaluation', s:'8.F.1' },
+  // Pre-Algebra
+  { gk:'Pre-Algebra', n:'Multi-step equations with distribution', s:'8.EE.7b' },
+  { gk:'Pre-Algebra', n:'Solving proportions', s:'7.RP.2' },
+  { gk:'Pre-Algebra', n:'Slope or y-intercept from y = mx + b', s:'8.F.3' },
+  { gk:'Pre-Algebra', n:'Negative and zero exponents', s:'8.EE.1' },
+  { gk:'Pre-Algebra', n:'Inequalities, boundary value', s:'7.EE.4b' },
+  { gk:'Pre-Algebra', n:'Function notation', s:'F-IF.2' },
+  // Algebra I
+  { gk:'Algebra I', n:'Solving multi-step linear equations', s:'A-REI.3' },
+  { gk:'Algebra I', n:'Function evaluation', s:'F-IF.2' },
+  { gk:'Algebra I', n:'Discriminant value', s:'A-REI.4b' },
+  { gk:'Algebra I', n:'Factored quadratic to roots (sum or product)', s:'A-REI.4b' },
+  { gk:'Algebra I', n:'Slope or y-intercept from any form', s:'F-IF.7a' },
+  { gk:'Algebra I', n:'Distance between two points (integer triples)', s:'G-GPE.7' },
+  { gk:'Algebra I', n:'Midpoint, single coordinate', s:'G-GPE.6' },
+  { gk:'Algebra I', n:'Arithmetic sequences, nth term', s:'F-BF.2' },
+  { gk:'Algebra I', n:'Exponential evaluation', s:'F-LE' },
+  { gk:'Algebra I', n:'Polynomial evaluation at a point', s:'A-APR.1' },
+  // Geometry
+  { gk:'Geometry', n:'Triangle angle sum', s:'G-CO.10' },
+  { gk:'Geometry', n:'Polygon angle sums (interior or exterior)', s:'G-CO.11' },
+  { gk:'Geometry', n:'Parallel lines cut by a transversal', s:'G-CO.9' },
+  { gk:'Geometry', n:'Pythagorean theorem with integer triples', s:'G-SRT.8' },
+  { gk:'Geometry', n:'Special right triangles — Level A: 45-45-90', s:'G-SRT.6' },
+  { gk:'Geometry', n:'Special right triangles — Level B: 30-60-90', s:'G-SRT.6' },
+  { gk:'Geometry', n:'Right-triangle trig — Level A: find side', s:'G-SRT.8', c:1 },
+  { gk:'Geometry', n:'Right-triangle trig — Level B: find angle', s:'G-SRT.8', c:1 },
+  { gk:'Geometry', n:'Inscribed and central angle relationships', s:'G-C.2' },
+  { gk:'Geometry', n:'Distance and midpoint formulas', s:'G-GPE.6/7' },
+  { gk:'Geometry', n:'Similar triangles, missing side', s:'G-SRT.5' },
+  { gk:'Geometry', n:'Single transformations, one coordinate of image', s:'G-CO.5' },
+  // Algebra II
+  { gk:'Algebra II', n:'Logarithm evaluation — Level A: integer answers', s:'F-LE.4' },
+  { gk:'Algebra II', n:'Logarithm evaluation — Level B: change of base', s:'F-LE.4', c:1 },
+  { gk:'Algebra II', n:'Log properties on a single value', s:'F-LE.4' },
+  { gk:'Algebra II', n:'Solving exponential equations (clean)', s:'F-LE.4' },
+  { gk:'Algebra II', n:'Function composition output', s:'F-BF.1c' },
+  { gk:'Algebra II', n:'Complex number arithmetic, real or imaginary part', s:'N-CN.2' },
+  { gk:'Algebra II', n:'Modulus of a complex number', s:'N-CN' },
+  { gk:'Algebra II', n:'Arithmetic sequences, nth term', s:'F-BF.2' },
+  { gk:'Algebra II', n:'Geometric sequences, nth term', s:'F-BF.2', c:1 },
+  { gk:'Algebra II', n:'Vertex of parabola, x or y', s:'F-IF.8a' },
+  { gk:'Algebra II', n:'Vertical asymptote x-value', s:'F-IF.7d' },
+  // Pre-Calculus
+  { gk:'Pre-Calculus', n:'Unit circle exact values', s:'F-TF.2' },
+  { gk:'Pre-Calculus', n:'Inverse trig at standard values', s:'F-TF.6' },
+  { gk:'Pre-Calculus', n:'Trig at non-special angles', s:'F-TF', c:1 },
+  { gk:'Pre-Calculus', n:'Reference angle', s:'F-TF' },
+  { gk:'Pre-Calculus', n:'Period or amplitude of a trig function', s:'F-TF.5' },
+  { gk:'Pre-Calculus', n:'Vector magnitude', s:'N-VM.1', c:1 },
+  { gk:'Pre-Calculus', n:'Vector dot product', s:'N-VM.4' },
+  { gk:'Pre-Calculus', n:'Vector component', s:'N-VM.2' },
+  { gk:'Pre-Calculus', n:'2×2 determinants', s:'N-VM.10' },
+  { gk:'Pre-Calculus', n:'Algebraic limits (factor-cancel)', s:'' },
+  { gk:'Pre-Calculus', n:'Conic single feature (center coordinate, completed-square form)', s:'G-GPE' },
+  // Calculus
+  { gk:'Calculus', n:'Derivative at a point (clean polynomials)', s:'' },
+  { gk:'Calculus', n:'Slope of tangent line at a point', s:'' },
+  { gk:'Calculus', n:'Definite integrals with clean antiderivatives', s:'' },
+  { gk:'Calculus', n:'Algebraic limits and limits at infinity', s:'' },
+  { gk:'Calculus', n:'L’Hôpital limits with quick simplification', s:'' },
+  { gk:'Calculus', n:'Critical point x-values (low-degree polynomials)', s:'' },
+  { gk:'Calculus', n:'Inflection point x-values (low-degree polynomials)', s:'' },
+  { gk:'Calculus', n:'Average rate of change', s:'' },
+  { gk:'Calculus', n:'Absolute max or min on a closed interval (low-degree polynomials)', s:'' },
+  // Statistics
+  { gk:'Statistics', n:'Z-scores', s:'S-ID.4' },
+  { gk:'Statistics', n:'Normal probability from a Z-table', s:'', c:1 },
+  { gk:'Statistics', n:'Combinations', s:'S-CP', c:1 },
+  { gk:'Statistics', n:'Permutations', s:'S-CP', c:1 },
+];
+// Resolve grade label for each topic from gk
+TOPICS.forEach(t => { t.g = GRADE_LABELS[t.gk]; });
+
+/* ============================================================
+   CSV PARSER (handles quoted fields, CRLF/LF, whitespace)
+   ============================================================ */
+function parseCSVText(text) {
+  const rows = [];
+  const raw = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  let i = 0;
+  while (i <= raw.length) {
+    const row = [];
+    while (true) {
+      let field = '';
+      if (i < raw.length && raw[i] === '"') {
+        i++; // skip opening quote
+        while (i < raw.length) {
+          if (raw[i] === '"' && raw[i+1] === '"') { field += '"'; i += 2; }
+          else if (raw[i] === '"') { i++; break; }
+          else { field += raw[i++]; }
+        }
+        // skip to comma or newline
+        while (i < raw.length && raw[i] !== ',' && raw[i] !== '\n') i++;
+      } else {
+        while (i < raw.length && raw[i] !== ',' && raw[i] !== '\n') {
+          field += raw[i++];
+        }
+      }
+      row.push(field.trim());
+      if (i >= raw.length || raw[i] === '\n') { i++; break; }
+      i++; // skip comma
+    }
+    if (row.length === 1 && row[0] === '') {
+      if (i > raw.length) break;
+      continue;
+    }
+    rows.push(row);
+    if (i > raw.length) break;
+  }
+  return rows;
+}
+
+/* ============================================================
+   PROBLEM LOADER & VALIDATOR
+   ============================================================ */
+const BINGO_COLS = ['B','I','N','G','O'];
+const VALID_COLS = new Set(BINGO_COLS);
+
+function loadProblems(csvText, filename) {
+  const rows = parseCSVText(csvText);
+  const errors = [];
+  const problems = [];
+  const allRows = []; // includes invalid rows for the editor
+
+  if (rows.length < 2) {
+    errors.push('File appears empty or has no data rows.');
+    return { problems, errors, allRows };
+  }
+
+  // Identify header
+  const header = rows[0].map(h => h.toLowerCase().trim());
+  const colIdx     = header.indexOf('column');
+  const probIdx    = header.indexOf('problem');
+  const answerIdx  = header.indexOf('answer');
+
+  if (colIdx < 0 || probIdx < 0 || answerIdx < 0) {
+    const missing = [];
+    if (colIdx    < 0) missing.push('column');
+    if (probIdx   < 0) missing.push('problem');
+    if (answerIdx < 0) missing.push('answer');
+    errors.push(`Missing required header${missing.length > 1 ? 's' : ''}: ${missing.join(', ')}. Expected: column, problem, answer.`);
+    return { problems, errors, allRows };
+  }
+
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (row.length <= Math.max(colIdx, probIdx, answerIdx)) continue;
+
+    const col    = row[colIdx].trim().toUpperCase();
+    const prob   = row[probIdx].trim();
+    const ansRaw = row[answerIdx].trim();
+
+    const rowErrors = [];
+    if (!VALID_COLS.has(col))               rowErrors.push('Column must be B, I, N, G, or O');
+    if (!prob)                              rowErrors.push('Problem is empty');
+    const ansNum = parseFloat(ansRaw);
+    if (ansRaw === '')          rowErrors.push('Answer is required');
+    else if (isNaN(ansNum))     rowErrors.push('Answer must be a number');
+
+    const editRow = { id: newRowId(), column: col || '', problem: prob, answer: ansRaw, errors: rowErrors };
+    allRows.push(editRow);
+
+    if (rowErrors.length === 0) {
+      problems.push({ column: col, problem: prob, answer: ansNum });
+    }
+  }
+
+  if (problems.length === 0) {
+    errors.push('No valid problems found in file.');
+    return { problems, errors, allRows };
+  }
+
+  return { problems, errors, allRows };
+}
+
+/* ============================================================
+   SETTINGS (localStorage)
+   ============================================================ */
+const SETTINGS_KEY = 'mathBingoSettings_v1';
+const DEFAULT_SETTINGS = {
+  theme: 'light',
+  showBoard: true,
+  boardContent: 'problems',   // 'problems' | 'answers'
+  showColumn: true,
+  showNavButtons: true,
+  showProgress: false,
+  showRecentBalls: true,
+  autoAdvanceOn: false,
+  autoAdvanceInterval: 20,
+  boardMode: 'recent',  // 'grid' | 'recent'
+  recentCount: 5,       // 1–10
+  recentBallScale: 1.5, // 0.5–2.5
+  cardColors: { B: '#1565c0', I: '#2e7d32', N: '#e65100', G: '#6a1b9a', O: '#b71c1c' },
+  ballAnimation: 'drop',     // 'drop' | 'pop' | 'roll' | 'none'
+  soundEnabled: true,
+  soundMuted: false,
+  soundVolume: 0.6,          // 0.0 – 1.0
+  soundTick: true,
+  font: 'default',  // 'default' | 'inter' | 'alfa-slab-one' | 'comic-neue' | 'creepster' | 'jetbrains-mono'
+};
+
+// PDF TTF URLs from the official google/fonts GitHub repo via jsDelivr.
+// (@fontsource v5 only ships WOFF2 which jsPDF cannot embed.)
+const _GFONTS = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl';
+const FONT_OPTIONS = {
+  'default':         { label: 'Default (Helvetica)',  pdfName: 'helvetica',     cssStack: 'system-ui, -apple-system, sans-serif' },
+  'inter':           { label: 'Inter',                pdfName: 'Inter',         cssStack: '"Inter", sans-serif',         pdfUrls: { normal: `${_GFONTS}/inter/Inter%5Bopsz%2Cwght%5D.ttf` } },
+  'alfa-slab-one':   { label: 'Alfa Slab One',        pdfName: 'AlfaSlabOne',   cssStack: '"Alfa Slab One", serif',      pdfUrls: { normal: `${_GFONTS}/alfaslabone/AlfaSlabOne-Regular.ttf` } },
+  'comic-neue':      { label: 'Comic Neue',           pdfName: 'ComicNeue',     cssStack: '"Comic Neue", cursive',       pdfUrls: { normal: `${_GFONTS}/comicneue/ComicNeue-Regular.ttf`, bold: `${_GFONTS}/comicneue/ComicNeue-Bold.ttf` } },
+  'creepster':       { label: 'Creepster',            pdfName: 'Creepster',     cssStack: '"Creepster", cursive',        pdfUrls: { normal: `${_GFONTS}/creepster/Creepster-Regular.ttf` } },
+  'jetbrains-mono':  { label: 'JetBrains Mono',       pdfName: 'JetBrainsMono', cssStack: '"JetBrains Mono", monospace', pdfUrls: { normal: `${_GFONTS}/jetbrainsmono/JetBrainsMono%5Bwght%5D.ttf` } },
+};
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw);
+      const merged = Object.assign({}, DEFAULT_SETTINGS, saved);
+      merged.cardColors = Object.assign({}, DEFAULT_SETTINGS.cardColors, saved.cardColors || {});
+      return merged;
+    }
+  } catch(e) {}
+  return Object.assign({}, DEFAULT_SETTINGS, { cardColors: { ...DEFAULT_SETTINGS.cardColors } });
+}
+
+/* ============================================================
+   AUDIO (file paths — sounds/  folder relative to index.html)
+   ============================================================ */
+const SOUND_FILES = {
+  drop: 'sounds/Drop-Bounce.flac',
+  pop:  'sounds/Pop-Spring.flac',
+  roll: 'sounds/Roll-In.flac',
+  tick: 'sounds/Ticking.flac',
+};
+
+// Animation durations in seconds — auto-updated from audio file metadata
+// once the browser loads each file. Tweak these if timing feels off.
+const ANIM_DURATIONS = { drop: 0.62, pop: 0.45, roll: 0.70 };
+
+// Paths to Bingo celebration sounds (relative to index.html).
+// Add filenames here when you place audio files in sounds/Bingo/.
+// Example: ['sounds/Bingo/cheer.mp3', 'sounds/Bingo/fanfare.wav']
+const BINGO_SOUNDS = [
+  'sounds/Bingo/partyblower.mp3',
+  'sounds/Bingo/shoso_kansei_short_st.wav',
+];
+
+const audio = (() => {
+  const cache = {};
+  let unlocked = false;
+  let tickEl = null; // tracked so it can be stopped on demand
+
+  function loadAll() {
+    Object.entries(SOUND_FILES).forEach(([name, path]) => {
+      const a = new Audio(path);
+      a.preload = 'auto';
+      a.volume = (state.settings && state.settings.soundMuted) ? 0
+               : (state.settings && state.settings.soundVolume != null ? state.settings.soundVolume : 0.6);
+      cache[name] = a;
+      // Auto-update animation duration once the file's metadata is known
+      if (name in ANIM_DURATIONS) {
+        a.addEventListener('loadedmetadata', () => {
+          if (a.duration && isFinite(a.duration)) ANIM_DURATIONS[name] = a.duration;
+        });
+      }
+    });
+  }
+
+  function unlock() {
+    if (unlocked) return;
+    Object.values(cache).forEach(a => {
+      a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
+    });
+    unlocked = true;
+  }
+
+  function applyVolumeToAll() {
+    const v = state.settings.soundMuted ? 0 : state.settings.soundVolume;
+    Object.values(cache).forEach(a => { a.volume = v; });
+  }
+
+  return {
+    init: loadAll,
+    unlock,
+    setVolume: applyVolumeToAll,
+    setMuted:  applyVolumeToAll,
+    play(name) {
+      if (!state.settings.soundEnabled || state.settings.soundMuted) return;
+      if (name === 'ballDrop') {
+        const variant = state.settings.ballAnimation;
+        if (!variant || variant === 'none') return;
+        name = variant;  // resolve to drop / pop / roll
+      } else if (name === 'tick') {
+        if (!state.settings.soundTick) return;
+        // Stop any still-playing tick before starting a new one
+        stopTick();
+        const src = cache['tick'];
+        if (!src) return;
+        tickEl = src.cloneNode();
+        tickEl.volume = state.settings.soundVolume;
+        tickEl.play().catch(() => {});
+        tickEl.addEventListener('ended', () => { tickEl = null; });
+        return;
+      }
+      const src = cache[name];
+      if (!src) return;
+      const a = src.cloneNode();
+      a.volume = state.settings.soundVolume;
+      a.play().catch(() => {});
+    },
+    stopTick
+  };
+
+  function stopTick() {
+    if (tickEl) {
+      try { tickEl.pause(); tickEl.currentTime = 0; } catch(e) {}
+      tickEl = null;
+    }
+  }
+})();
+
+// Unlock audio on first user gesture (browser autoplay policy)
+['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
+  window.addEventListener(ev, () => audio.unlock(), { passive: true })
+);
+
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch(e) {}
+}
+
+function playBingoSound() {
+  if (!state.settings.soundEnabled || state.settings.soundMuted) return;
+  if (!BINGO_SOUNDS.length) return;
+  const path = BINGO_SOUNDS[Math.floor(Math.random() * BINGO_SOUNDS.length)];
+  const a = new Audio(path);
+  a.volume = state.settings.soundVolume;
+  a.play().catch(() => {});
+}
+
+function triggerConfetti() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999';
+  document.body.appendChild(canvas);
+  const W = canvas.width  = window.innerWidth;
+  const H = canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const COLORS = ['#f7b731','#26de81','#fd9644','#4bcffa','#fd79a8',
+                  '#a29bfe','#55efc4','#fdcb6e','#e17055','#74b9ff'];
+  const particles = Array.from({ length: 120 }, () => ({
+    x:   Math.random() * W,
+    y:   -10 - Math.random() * 40,
+    vx:  (Math.random() - 0.5) * 3,
+    vy:  2 + Math.random() * 4,
+    w:   6 + Math.random() * 8,
+    h:   10 + Math.random() * 6,
+    rot: Math.random() * Math.PI * 2,
+    dr:  (Math.random() - 0.5) * 0.18,
+    col: COLORS[Math.floor(Math.random() * COLORS.length)],
+  }));
+  let rafId;
+  function frame() {
+    ctx.clearRect(0, 0, W, H);
+    let alive = false;
+    for (const p of particles) {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.rot += p.dr;
+      if (p.y < H + 20) alive = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillStyle = p.col;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    if (alive) { rafId = requestAnimationFrame(frame); } else { canvas.remove(); }
+  }
+  rafId = requestAnimationFrame(frame);
+  setTimeout(() => { cancelAnimationFrame(rafId); canvas.remove(); }, 6000);
+}
+
+function triggerBingo() {
+  closeOverlay('check-answers-overlay');
+  triggerConfetti();
+  playBingoSound();
+}
+
+/* ============================================================
+   GAME STATE
+   ============================================================ */
+const state = {
+  problems: [],
+  editRows: [],        // [{ id, column, problem, answer(str), errors[] }] — all rows including invalid
+  queue: [],
+  history: [],
+  currentIndex: -1,
+  calledAnswers: {},   // { B: Set<number>, I: Set<number>, ... }
+  columnAnswers: {},   // { B: number[], ... } — sorted distinct answers per column
+  setName: '',
+  gameOver: false,
+  currentView: 'home',
+  settings: loadSettings(),
+};
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function buildColumnAnswers(problems) {
+  const map = {};
+  for (const p of problems) {
+    if (!map[p.column]) map[p.column] = new Set();
+    map[p.column].add(p.answer);
+  }
+  const result = {};
+  for (const [col, vals] of Object.entries(map)) {
+    result[col] = [...vals].sort((a,b) => a - b);
+  }
+  return result;
+}
+
+function initGame() {
+  state.queue = shuffle(state.problems);
+  state.history = [];
+  state.currentIndex = -1;
+  state.calledAnswers = { B: new Set(), I: new Set(), N: new Set(), G: new Set(), O: new Set() };
+  state.gameOver = false;
+  resetRenderState();
+}
+
+function currentProblem() {
+  return state.currentIndex >= 0 ? state.history[state.currentIndex] : null;
+}
+
+function isReplay() {
+  return state.currentIndex >= 0 && state.currentIndex < state.history.length - 1;
+}
+
+function canGoNext() {
+  // can advance through history or draw new
+  if (state.currentIndex < state.history.length - 1) return true;
+  return !state.gameOver && state.queue.length > 0;
+}
+
+function nextProblem() {
+  // if we're in the middle of history, just move forward
+  if (state.currentIndex < state.history.length - 1) {
+    state.currentIndex++;
+    state.answerVisible = false;
+    return true;
+  }
+  if (state.gameOver) return false;
+
+  // draw from queue, skipping already-called answers
+  while (state.queue.length > 0) {
+    const p = state.queue.shift();
+    const called = state.calledAnswers[p.column] || new Set();
+    if (called.has(p.answer)) continue;
+
+    // valid new problem
+    if (!state.calledAnswers[p.column]) state.calledAnswers[p.column] = new Set();
+    state.calledAnswers[p.column].add(p.answer);
+    state.history.push(p);
+    state.currentIndex = state.history.length - 1;
+    state.answerVisible = false;
+    return true;
+  }
+
+  state.gameOver = true;
+  return false;
+}
+
+function prevProblem() {
+  if (state.currentIndex <= 0) return false;
+  state.currentIndex--;
+  state.answerVisible = false;
+  return true;
+}
+
+function toggleAnswer() {
+  state.answerVisible = !state.answerVisible;
+}
+
+function resetGame() {
+  stopTimer();
+  initGame();
+}
+
+/* ============================================================
+   VIEW SWITCHING
+   ============================================================ */
+function showView(view) {
+  if (view !== 'caller') stopTimer();
+  state.currentView = view;
+  document.getElementById('homepage-view').hidden = (view !== 'home');
+  document.getElementById('print-view').hidden    = (view !== 'print');
+  document.getElementById('app').hidden            = (view !== 'caller');
+  document.getElementById('btn-back-home').hidden  = (view !== 'caller');
+}
+
+function applyLoadedSet(problems, name, allRows = null) {
+  state.problems      = problems;
+  state.setName       = name;
+  state.columnAnswers = buildColumnAnswers(problems);
+  // Populate editRows — use allRows from CSV parse (preserves invalid rows)
+  // or derive from valid problems if allRows not provided
+  state.editRows = allRows
+    ? allRows
+    : problems.map(p => ({ id: newRowId(), column: p.column, problem: p.problem, answer: String(p.answer), errors: [] }));
+}
+
+function findTopicByPath(path) {
+  return TOPICS.find(t => t.path === path) || null;
+}
+
+function fetchAndLoadSet(set, label, action, errElId = 'hp-set-error') {
+  const go = csv => {
+    const { problems, errors, allRows } = loadProblems(csv, label);
+    if (errors.length) {
+      const el = document.getElementById(errElId);
+      if (el) { el.textContent = errors.join(' · '); el.hidden = false; }
+      return;
+    }
+    applyLoadedSet(problems, label, allRows);
+    if (action === 'host') {
+      resetGame(); showView('caller'); computeProblemFontSize(); render();
+    } else {
+      showView('print'); renderPrintView();
+    }
+  };
+  if (set.path) {
+    if (location.protocol === 'file:') {
+      const el = document.getElementById(errElId);
+      if (el) { el.textContent = 'Pre-built sets require an HTTP server. Open via VS Code Live Server, or host online.'; el.hidden = false; }
+      return;
+    }
+    fetch(set.path, { cache: 'no-cache' }).then(r => { if (!r.ok) throw new Error(); return r.text(); })
+      .then(go).catch(() => {
+        const el = document.getElementById(errElId);
+        if (el) { el.textContent = '⚠ Could not load set file.'; el.hidden = false; }
+      });
+  } else if (set.csv) {
+    go(set.csv);
+  }
+}
+
+function loadSetAndPlay(csv, filename, errorElId = null) {
+  // Clear any previous error before processing
+  if (errorElId) {
+    const el = document.getElementById(errorElId);
+    if (el) el.hidden = true;
+  }
+  const { problems, errors, allRows } = loadProblems(csv, filename);
+  if (errors.length) {
+    if (errorElId) {
+      const el = document.getElementById(errorElId);
+      if (el) { el.textContent = errors.join(' · '); el.hidden = false; }
+    } else {
+      showNotification(errors, 'error');
+    }
+    return;
+  }
+  const name = filename.replace(/\.csv$/i, '').replace(/[-_]/g, ' ');
+  applyLoadedSet(problems, name, allRows);
+  resetGame();
+  showView('caller');
+  computeProblemFontSize();
+  render();
+}
+
+// Homepage filter state — persists across re-renders within a session
+const _hpFilter = { grade: '', query: '' };
+
+function renderHomepage() {
+  const container = document.getElementById('hp-tiles');
+
+  // Quick-start actions
+  const actionTile = `
+    <div class="hp-tile hp-tile-actions">
+      <div class="hp-tile-header">Get Started</div>
+      <div class="hp-upload-row">
+        <button class="hp-btn primary" id="hp-choose-file-btn"><svg class="icon" aria-hidden="true"><use href="#icon-upload"/></svg> Choose File</button>
+        <button class="hp-btn primary" id="hp-new-blank-btn"><svg class="icon" aria-hidden="true"><use href="#icon-file-plus"/></svg> New Blank Set</button>
+        <button class="hp-btn" id="hp-format-help-btn">Format Help</button>
+        <button class="hp-btn" id="hp-dl-template-btn">Download Template</button>
+      </div>
+      <div id="hp-upload-error" hidden></div>
+    </div>`;
+
+  // Available sets section — search + grade chips + filtered list
+  const availableTile = `
+    <div class="hp-tile hp-tile-sets">
+      <div class="hp-tile-header">Ready to Play</div>
+      <div class="hp-search-wrap">
+        <input id="hp-search" class="hp-search" type="search"
+          placeholder="Search topics or standards…"
+          value="${escHtml(_hpFilter.query)}"
+          aria-label="Search topics">
+      </div>
+      <div class="hp-chips" id="hp-chips" role="tablist" aria-label="Filter by grade level">
+        <button class="hp-chip${_hpFilter.grade === '' ? ' active' : ''}" data-grade="">All</button>
+        ${GRADE_ORDER.map(gk => `<button class="hp-chip${_hpFilter.grade === gk ? ' active' : ''}" data-grade="${escHtml(gk)}">${escHtml(GRADE_CHIP_LABELS[gk])}</button>`).join('')}
+      </div>
+      <div id="hp-sets-list" class="hp-sets-list" aria-live="polite"></div>
+      <div class="hp-roadmap-foot">
+        <button class="hp-link-btn" id="hp-roadmap-btn"><svg class="icon" aria-hidden="true"><use href="#icon-chevron-right"/></svg> View full topic roadmap</button>
+      </div>
+    </div>`;
+
+  container.innerHTML = actionTile + availableTile;
+
+  // Wire actions
+  document.getElementById('hp-choose-file-btn').onclick = () => document.getElementById('file-input').click();
+  document.getElementById('hp-new-blank-btn').onclick = () => {
+    state.editRows = [];
+    state.problems = [];
+    state.columnAnswers = {};
+    state.setName = 'New Set';
+    showView('print');
+    renderPrintView();
+    document.getElementById('pv-add-row-btn')?.focus();
+  };
+  document.getElementById('hp-format-help-btn').onclick = () => openOverlay('csv-help-overlay');
+  document.getElementById('hp-dl-template-btn').onclick = () => downloadTemplate();
+  document.getElementById('hp-roadmap-btn').onclick = () => { renderRoadmapOverlay(); openOverlay('roadmap-overlay'); };
+
+  // Search input
+  const searchEl = document.getElementById('hp-search');
+  searchEl.addEventListener('input', () => {
+    _hpFilter.query = searchEl.value;
+    renderAvailableSets();
+  });
+
+  // Grade chips
+  document.getElementById('hp-chips').addEventListener('click', e => {
+    const chip = e.target.closest('.hp-chip');
+    if (!chip) return;
+    _hpFilter.grade = chip.dataset.grade;
+    document.querySelectorAll('#hp-chips .hp-chip').forEach(c => c.classList.toggle('active', c === chip));
+    renderAvailableSets();
+  });
+
+  renderAvailableSets();
+}
+
+// Render the filtered list of available (playable) topics
+function renderAvailableSets() {
+  const listEl = document.getElementById('hp-sets-list');
+  if (!listEl) return;
+  const q = _hpFilter.query.trim().toLowerCase();
+  const matches = TOPICS.filter(t => {
+    if (!t.path) return false;  // hide coming-soon
+    if (_hpFilter.grade && t.gk !== _hpFilter.grade) return false;
+    if (q && !(t.n.toLowerCase().includes(q) || (t.s||'').toLowerCase().includes(q) || t.g.toLowerCase().includes(q))) return false;
+    return true;
+  });
+
+  if (matches.length === 0) {
+    const filterDesc = _hpFilter.grade ? `${GRADE_LABELS[_hpFilter.grade]}` : (q ? `"${escHtml(q)}"` : 'this view');
+    listEl.innerHTML = `<div class="hp-empty">
+      <p>No playable sets match ${filterDesc} yet.</p>
+      <p class="hp-empty-hint">Check the <button class="hp-link-btn-inline" id="hp-empty-roadmap">topic roadmap</button> to see what's coming, or upload your own CSV above.</p>
+    </div>`;
+    document.getElementById('hp-empty-roadmap')?.addEventListener('click', () => { renderRoadmapOverlay(); openOverlay('roadmap-overlay'); });
+    return;
+  }
+
+  // Group by grade
+  const byGrade = {};
+  matches.forEach(t => { (byGrade[t.gk] = byGrade[t.gk] || []).push(t); });
+  const html = GRADE_ORDER.filter(gk => byGrade[gk]).map(gk => {
+    const items = byGrade[gk].map(t => {
+      const tags = (t.f ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
+                 + (t.c ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
+      return `<button class="hp-set-card" data-path="${escHtml(t.path)}">
+        <div class="hp-set-name">${escHtml(t.n)} ${tags}</div>
+        ${t.s ? `<div class="hp-set-std">${escHtml(t.s)}</div>` : ''}
+      </button>`;
+    }).join('');
+    return `<div class="hp-grade-group">
+      <div class="hp-grade-label">${escHtml(GRADE_LABELS[gk])}</div>
+      <div class="hp-set-cards">${items}</div>
+    </div>`;
+  }).join('');
+  listEl.innerHTML = html;
+
+  // Wire set clicks via delegation
+  listEl.onclick = e => {
+    const card = e.target.closest('.hp-set-card');
+    if (!card) return;
+    const topic = findTopicByPath(card.dataset.path);
+    if (!topic) return;
+    document.getElementById('hp-set-error').hidden = true;
+    const label = `${topic.g} — ${topic.n}`;
+    fetchAndLoadSet(topic, label, 'print');
+  };
+}
+
+// Roadmap overlay — show the entire master list, organized by grade
+function renderRoadmapOverlay() {
+  const body = document.getElementById('roadmap-body');
+  if (!body) return;
+  const byGrade = {};
+  TOPICS.forEach(t => { (byGrade[t.gk] = byGrade[t.gk] || []).push(t); });
+  body.innerHTML = GRADE_ORDER.filter(gk => byGrade[gk]).map(gk => {
+    const rows = byGrade[gk].map(t => {
+      const tags = (t.f ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
+                 + (t.c ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
+      const status = t.path ? '<span class="rm-status rm-ready">Ready</span>' : '<span class="rm-status rm-soon">Coming soon</span>';
+      return `<li class="rm-row${t.path ? ' rm-ready-row' : ''}">
+        <span class="rm-name">${escHtml(t.n)} ${tags}</span>
+        ${t.s ? `<span class="rm-std">${escHtml(t.s)}</span>` : '<span class="rm-std"></span>'}
+        ${status}
+      </li>`;
+    }).join('');
+    return `<section class="rm-grade">
+      <h3 class="rm-grade-title">${escHtml(GRADE_LABELS[gk])}</h3>
+      <ul class="rm-list">${rows}</ul>
+    </section>`;
+  }).join('');
+}
+function renderPrintView() {
+  document.getElementById('pv-title').textContent = state.setName || 'Print Cards';
+  applyCardColors();
+  const loadErrEl = document.getElementById('pv-load-error');
+  if (loadErrEl) loadErrEl.hidden = true;
+  // Detect duplicate (column, answer) pairs in loaded data so editor + gates flag them on first render.
+  syncProblemsFromEditRows();
+  renderPvEditTable();
+}
+
+/* ============================================================
+   SET EDITOR — always-editable problem table
+   ============================================================ */
+
+/** Validate a single editRow in-place, updating row.errors. Returns errors array. */
+function validateEditRow(row) {
+  const errors = [];
+  if (!VALID_COLS.has((row.column || '').toUpperCase())) errors.push('Column must be B, I, N, G, or O');
+  if (!(row.problem || '').trim())                       errors.push('Problem is empty');
+  const ansStr = (row.answer || '').trim();
+  if (ansStr === '')              errors.push('Answer is required');
+  else if (isNaN(parseFloat(ansStr))) errors.push('Answer must be a number');
+  row.errors = errors;
+  return errors;
+}
+
+/** Derive state.problems from valid editRows and rebuild columnAnswers. */
+function syncProblemsFromEditRows() {
+  // 1. Clear stale duplicate errors; basic field errors remain from validateEditRow
+  state.editRows.forEach(r => {
+    r.errors = r.errors.filter(e => !e.startsWith('Duplicate'));
+  });
+
+  // 2. Detect duplicate (column, answer) pairs among otherwise-valid rows
+  const answerKeys = {};
+  state.editRows.forEach(r => {
+    if (r.errors.length > 0) return;
+    const key = r.column.toUpperCase() + ':' + parseFloat(r.answer);
+    (answerKeys[key] = answerKeys[key] || []).push(r.id);
+  });
+  Object.values(answerKeys).forEach(ids => {
+    if (ids.length > 1) {
+      ids.forEach(id => {
+        const row = state.editRows.find(r => r.id === id);
+        if (row) row.errors.push('Duplicate answer in this column');
+      });
+    }
+  });
+
+  // 3. Refresh DOM for all rows (duplicate errors may have been added or cleared)
+  state.editRows.forEach(r => {
+    const tr = document.querySelector(`#pv-edit-table tr[data-rowid="${r.id}"]`);
+    if (tr) updateEditRowUI(tr, r);
+  });
+
+  // 4. Derive valid problems
+  state.problems = state.editRows
+    .filter(r => r.errors.length === 0)
+    .map(r => ({ column: r.column.toUpperCase(), problem: r.problem.trim(), answer: parseFloat(r.answer) }));
+  state.columnAnswers = buildColumnAnswers(state.problems);
+  updatePvPreviewCount();
+}
+
+/** Update the topbar column-count chips and guidance message. */
+function updatePvPreviewCount() {
+  const el    = document.getElementById('pv-col-counts');
+  const msgEl = document.getElementById('pv-topbar-msg');
+  if (!el) return;
+
+  const MIN_DISTINCT = 5;
+  const REC_DISTINCT = 15;
+
+  // Count valid rows and distinct answers per column
+  const colRowCount = { B:0, I:0, N:0, G:0, O:0 };
+  const colAnswers  = { B:new Set(), I:new Set(), N:new Set(), G:new Set(), O:new Set() };
+  state.editRows.forEach(r => {
+    if (r.errors.length > 0) return;
+    const c = r.column.toUpperCase();
+    if (c in colRowCount) {
+      colRowCount[c]++;
+      colAnswers[c].add(parseFloat(r.answer));
+    }
+  });
+
+  const totalValid = Object.values(colRowCount).reduce((a, b) => a + b, 0);
+
+  // Chips — ⚠ when a column has fewer than MIN_DISTINCT distinct answers (and set is non-empty)
+  el.innerHTML = BINGO_COLS.map(col => {
+    const count    = colRowCount[col];
+    const distinct = colAnswers[col].size;
+    const warn     = totalValid > 0 && distinct < MIN_DISTINCT;
+    const warnIcon = warn ? `<span class="pv-col-warn-icon">${icon('alert-triangle')}</span>` : '';
+    return `<span class="pv-col-count${warn ? ' pv-col-warn' : ''}" style="background:var(--col-${col})"><strong>${col}</strong>&thinsp;<span style="font-weight:400">${count}</span>${warnIcon}</span>`;
+  }).join('');
+
+  // Inline guidance message
+  if (msgEl) {
+    if (totalValid === 0) {
+      msgEl.textContent = '';
+    } else {
+      const distinctCounts = BINGO_COLS.map(c => colAnswers[c].size);
+      const minDistinct    = Math.min(...distinctCounts);
+      const maxDistinct    = Math.max(...distinctCounts);
+
+      if (minDistinct < MIN_DISTINCT) {
+        msgEl.textContent = `Bingo cards require at least ${MIN_DISTINCT} different answers per column. ${REC_DISTINCT} answers per column is recommended.`;
+      } else if (maxDistinct > REC_DISTINCT) {
+        msgEl.textContent = 'Games that exceed 15 answers per column can take a long time to complete.';
+      } else {
+        msgEl.textContent = '15 answers per column is recommended.';
+      }
+    }
+  }
+}
+
+/**
+ * Attempt arithmetic auto-check for simple expressions (no LaTeX).
+ * Returns 'ok', 'bad', or null (cannot evaluate).
+ */
+function checkProblemAnswer(problem, answerStr) {
+  if (!/^[0-9+\-*\/\(\)\s.]+$/.test(problem || '')) return null;
+  try {
+    // eslint-disable-next-line no-new-func
+    const result = Function('"use strict"; return (' + problem + ')')();
+    if (typeof result !== 'number' || !isFinite(result)) return null;
+    return Math.abs(result - parseFloat(answerStr)) < 0.001 ? 'ok' : 'bad';
+  } catch { return null; }
+}
+
+/** Get the editRow object from a child element of a TR[data-rowid]. */
+function getEditRowFromEl(el) {
+  const tr = el.closest('tr[data-rowid]');
+  if (!tr) return null;
+  return state.editRows.find(r => r.id === parseInt(tr.dataset.rowid, 10)) || null;
+}
+
+/** Update a single row's UI classes/error list after a data change (no full re-render). */
+function updateEditRowUI(tr, row) {
+  // Combine validation errors with arithmetic check
+  const allErrors = [...row.errors];
+  if (row.errors.length === 0 && checkProblemAnswer(row.problem, row.answer) === 'bad') {
+    allErrors.push('Answer may be wrong');
+  }
+
+  tr.classList.toggle('pv-row-error', allErrors.length > 0);
+
+  const colSel  = tr.querySelector('.pv-col-select');
+  const probInp = tr.querySelector('.pv-prob-input');
+  const ansInp  = tr.querySelector('.pv-ans-input');
+
+  // Column td background
+  if (colSel) {
+    const colTd = colSel.closest('td');
+    const hasColErr = row.errors.some(e => e.includes('Column'));
+    if (colTd) colTd.style.background = hasColErr ? '#c62828' : (COL_COLORS[row.column.toUpperCase()] || '#888');
+  }
+  if (probInp) probInp.classList.toggle('input-error', allErrors.some(e => e.includes('Problem')));
+  if (ansInp)  ansInp.classList.toggle('input-error',  allErrors.some(e => e.includes('Answer')));
+
+  // Error list — update or create the pv-row-errors div in the problem cell
+  const probCell = tr.querySelector('td:nth-child(2)');
+  if (probCell) {
+    let errDiv = probCell.querySelector('.pv-row-errors');
+    if (allErrors.length) {
+      if (!errDiv) { errDiv = document.createElement('div'); errDiv.className = 'pv-row-errors'; probCell.appendChild(errDiv); }
+      errDiv.innerHTML = allErrors.map(e => `<div class="pv-row-error-msg">${escHtml(e)}</div>`).join('');
+    } else {
+      errDiv?.remove();
+    }
+  }
+}
+
+/** Wire delegated events for the edit table. */
+function wirePvEditEvents(tBody, tFoot) {
+  // Column select change
+  tBody.addEventListener('change', e => {
+    const sel = e.target.closest('.pv-col-select');
+    if (!sel) return;
+    const row = getEditRowFromEl(sel);
+    if (!row) return;
+    row.column = sel.value;
+    validateEditRow(row);
+    updateEditRowUI(sel.closest('tr'), row);
+    // Update td background to match new column color
+    const td = sel.closest('td');
+    if (td) td.style.background = (row.errors.some(e => e.includes('Column')) ? '#c62828' : COL_COLORS[sel.value]) || '';
+    syncProblemsFromEditRows();
+  });
+
+  // Problem input
+  tBody.addEventListener('input', e => {
+    const inp = e.target.closest('.pv-prob-input');
+    if (!inp) return;
+    const tr  = inp.closest('tr');
+    const row = getEditRowFromEl(inp);
+    if (!row) return;
+    row.problem = inp.value;
+    validateEditRow(row);
+    updateEditRowUI(tr, row);
+    syncProblemsFromEditRows();
+    // Debounced KaTeX preview
+    clearTimeout(inp._pvDebounce);
+    inp._pvDebounce = setTimeout(() => {
+      const previewEl = tr.querySelector('.pv-prob-preview');
+      if (!previewEl) return;
+      previewEl.innerHTML = '';
+      previewEl.classList.remove('preview-error');
+      if (inp.value.trim()) {
+        try { renderMath(previewEl, inp.value); }
+        catch { previewEl.textContent = '⚠ LaTeX error'; previewEl.classList.add('preview-error'); }
+      }
+    }, 280);
+  });
+
+  // Answer input
+  tBody.addEventListener('input', e => {
+    const inp = e.target.closest('.pv-ans-input');
+    if (!inp) return;
+    const tr  = inp.closest('tr');
+    const row = getEditRowFromEl(inp);
+    if (!row) return;
+    row.answer = inp.value;
+    validateEditRow(row);
+    updateEditRowUI(tr, row);
+    syncProblemsFromEditRows();
+  });
+
+  // Delete row
+  tBody.addEventListener('click', e => {
+    const btn = e.target.closest('.pv-del-btn');
+    if (!btn) return;
+    const tr = btn.closest('tr');
+    const id = parseInt(tr.dataset.rowid, 10);
+    state.editRows = state.editRows.filter(r => r.id !== id);
+    tr.remove();
+    syncProblemsFromEditRows();
+  });
+
+  // Add row
+  tFoot.querySelector('#pv-add-row-btn').onclick = () => {
+    const newRow = {
+      id: newRowId(), column: 'B', problem: '', answer: '',
+      errors: ['Problem is empty', 'Answer is required']
+    };
+    state.editRows.push(newRow);
+    renderPvEditTable();
+    // Focus the last problem input
+    const inputs = document.querySelectorAll('#pv-edit-table .pv-prob-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  };
+}
+
+/** Render the always-editable problem table into #pv-problems-table. */
+function renderPvEditTable() {
+  const container = document.getElementById('pv-problems-table');
+  if (!container) return;
+
+  const tBody = document.createElement('tbody');
+
+  state.editRows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.dataset.rowid = row.id;
+
+    const colUpper = (row.column || '').toUpperCase();
+    const colOptions = BINGO_COLS.map(c =>
+      `<option${c === colUpper ? ' selected' : ''}>${c}</option>`).join('');
+    // Collect all errors: validation + arithmetic check
+    const allErrors = [...row.errors];
+    if (row.errors.length === 0 && checkProblemAnswer(row.problem, row.answer) === 'bad') {
+      allErrors.push('Answer may be wrong');
+    }
+    const hasAnsErr = allErrors.some(e => e.includes('Answer'));
+    const probErr = allErrors.some(e => e.includes('Problem')) ? ' input-error' : '';
+    const ansErr  = hasAnsErr ? ' input-error' : '';
+    const errList = allErrors.length
+      ? `<div class="pv-row-errors">${allErrors.map(e => `<div class="pv-row-error-msg">${escHtml(e)}</div>`).join('')}</div>`
+      : '';
+
+    const hasColErr = row.errors.some(e => e.includes('Column'));
+    const colBg = (!hasColErr && COL_COLORS[colUpper]) ? `var(--col-${colUpper})` : '#c62828';
+    tr.className = 'pv-edit-row' + (allErrors.length ? ' pv-row-error' : '');
+    tr.innerHTML = `
+      <td style="background:${colBg};text-align:center;padding:2px 3px;"><select class="pv-col-select">${colOptions}</select></td>
+      <td style="min-width:130px">
+        <input class="pv-prob-input${probErr}" type="text"
+               value="${escHtml(row.problem)}" placeholder="e.g. 2+2 or \\frac{1}{2}">
+        <div class="pv-prob-preview"></div>
+        ${errList}
+      </td>
+      <td style="width:100px">
+        <input class="pv-ans-input${ansErr}" type="text"
+               value="${escHtml(row.answer)}" placeholder="e.g. 4">
+      </td>
+      <td style="width:30px;text-align:center">
+        <button class="pv-del-btn icon-btn" title="Delete row" aria-label="Delete row">${icon('x')}</button>
+      </td>`;
+
+    // Render initial KaTeX preview
+    const previewEl = tr.querySelector('.pv-prob-preview');
+    if (previewEl && (row.problem || '').trim()) {
+      try { renderMath(previewEl, row.problem); }
+      catch { previewEl.textContent = '⚠ LaTeX error'; previewEl.classList.add('preview-error'); }
+    }
+
+    tBody.appendChild(tr);
+  });
+
+  // Footer row with "Add Row" button
+  const tFoot = document.createElement('tfoot');
+  tFoot.innerHTML = `<tr id="pv-add-row-row"><td colspan="4">
+    <button class="hp-btn" id="pv-add-row-btn">+ Add PROBLEM</button>
+  </td></tr>`;
+
+  const table = document.createElement('table');
+  table.id = 'pv-edit-table';
+  table.innerHTML = `<thead><tr>
+    <th style="width:56px">Col</th>
+    <th>Problem (LaTeX or plain text)</th>
+    <th style="width:100px">Answer</th>
+    <th style="width:30px"></th>
+  </tr></thead>`;
+  table.appendChild(tBody);
+  table.appendChild(tFoot);
+
+  container.innerHTML = '';
+  container.appendChild(table);
+
+  wirePvEditEvents(tBody, tFoot);
+  updatePvPreviewCount();
+}
+
+function pvSaveSetCsv() {
+  if (state.editRows.length === 0) { showNotification(['No rows to save.'], 'error'); return; }
+  const lines = ['column,problem,answer'];
+  state.editRows.forEach(r => {
+    // Quote fields that contain commas or quotes
+    const q = s => /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    lines.push(`${q(r.column)},${q(r.problem)},${q(r.answer)}`);
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const name = (state.setName || 'bingo-set').replace(/[^a-zA-Z0-9 _-]/g, '').trim().replace(/\s+/g, '-') || 'bingo-set';
+  Object.assign(document.createElement('a'), { href: url, download: name + '.csv' }).click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadTemplate() {
+  const a = Object.assign(document.createElement('a'), {
+    href: 'sets/bingo-template.csv',
+    download: 'bingo-template.csv',
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* ============================================================
+   AUTO-ADVANCE TIMER
+   ============================================================ */
+let rafId = null;
+let _lastRenderedIndex = -1;
+
+// Centralized reset for per-game render-state trackers.
+// Call when loading a new set, resetting the game, or otherwise wiping history.
+function resetRenderState() {
+  _lastRenderedIndex = -1;
+  _lastAnimatedKey   = null;
+  _lastTickSec       = null;
+}
+let _resizeDebounceTimer = null;
+let timerEnd = null;
+let timerPaused = false;
+let timerRemainingMs = null;
+let _lastTickSec = null; // gate so each integer second only emits one tick
+const timerIntervalMs = () => state.settings.autoAdvanceInterval * 1000;
+
+function startTimer() {
+  stopTimer();
+  if (!state.settings.autoAdvanceOn || state.gameOver) return;
+  timerEnd = Date.now() + timerIntervalMs();
+  timerPaused = false;
+  timerRemainingMs = null;
+  _lastTickSec = null;
+  tickTimer();
+}
+
+function pauseTimer() {
+  if (!timerEnd && !timerPaused) return;
+  const fillEl = document.getElementById('timer-fill');
+  if (timerPaused) {
+    // resume
+    timerEnd = Date.now() + timerRemainingMs;
+    timerPaused = false;
+    timerRemainingMs = null;
+    if (fillEl) fillEl.classList.remove('paused');
+    tickTimer();
+  } else {
+    // pause
+    timerRemainingMs = Math.max(0, timerEnd - Date.now());
+    timerPaused = true;
+    if (fillEl) fillEl.classList.add('paused');
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+  updateTimerDisplay();
+}
+
+function stopTimer() {
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  audio.stopTick();
+  timerEnd = null;
+  timerPaused = false;
+  timerRemainingMs = null;
+  _lastTickSec = null;
+  const fillEl = document.getElementById('timer-fill');
+  if (fillEl) fillEl.classList.remove('paused');
+}
+
+function tickTimer() {
+  if (timerPaused) return;
+  const remaining = timerEnd - Date.now();
+  // Tick sound during the last 3 whole seconds (one per integer second).
+  const sec = Math.ceil(remaining / 1000);
+  if (sec > 0 && sec <= 3 && sec !== _lastTickSec) {
+    _lastTickSec = sec;
+    audio.play('tick');
+  }
+  if (remaining <= 0) {
+    stopTimer();
+    nextProblem();
+    render();
+    if (state.settings.autoAdvanceOn && !state.gameOver) startTimer();
+    return;
+  }
+  updateTimerDisplay(remaining);
+  rafId = requestAnimationFrame(tickTimer);
+}
+
+function updateTimerDisplay(remaining) {
+  const container = document.getElementById('timer-container');
+  if (!state.settings.autoAdvanceOn || !timerEnd && !timerPaused) {
+    container.hidden = true;
+    return;
+  }
+  container.hidden = false;
+  const total = timerIntervalMs();
+  const rem = remaining !== undefined ? remaining : (timerPaused ? timerRemainingMs : Math.max(0, timerEnd - Date.now()));
+  const pct = Math.max(0, Math.min(100, (rem / total) * 100));
+  document.getElementById('timer-fill').style.width = pct + '%';
+  const secs = Math.ceil(rem / 1000);
+  const label = timerPaused ? `${secs}s (paused)` : `${secs}s`;
+  document.getElementById('timer-label').textContent = label;
+}
+
+/* ============================================================
+   FONT AUTO-FIT
+   ============================================================ */
+// 20 iterations on a [16, 800] range narrows the binary search to ~1px,
+// which is finer than display rounding. Increase only if the range widens.
+const FONT_SIZE_BINARY_SEARCH_ITERATIONS = 20;
+
+function computeProblemFontSize() {
+  if (!state.problems || state.problems.length === 0) return;
+  const problemArea = document.getElementById('problem-area');
+  if (!problemArea || problemArea.offsetWidth === 0) return;
+
+  const longestProblem = state.problems.reduce(
+    (best, p) => p.problem.length > best.length ? p.problem : best, ''
+  );
+
+  // Mirror CSS: #problem-card { max-width: clamp(700px, 70vw, 1400px) }
+  // Card may be hidden (offsetWidth=0) when this runs before render(), so compute directly.
+  const cardMaxW = Math.min(Math.max(700, window.innerWidth * 0.7), 1400);
+  const availW = Math.min(problemArea.offsetWidth - 40, cardMaxW - 40);
+  // Total height minus #problem-area padding (20px × 2).
+  // For each candidate font size, the chip takes 1.3× that size + 16px gap,
+  // leaving the rest for the equation text (measured via the probe element).
+  const totalH = problemArea.offsetHeight - 40;
+  if (availW <= 0 || totalH <= 0) return;
+
+  const probe = document.createElement('span');
+  probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-weight:700;line-height:1.1;letter-spacing:-0.01em;top:-9999px;left:-9999px;';
+  if (longestProblem.includes('\\') && typeof katex !== 'undefined') {
+    try { probe.innerHTML = katex.renderToString(longestProblem, { throwOnError: false, displayMode: false }); }
+    catch(e) { probe.textContent = longestProblem; }
+  } else {
+    probe.textContent = longestProblem;
+  }
+  document.body.appendChild(probe);
+
+  let lo = 16, hi = 800, best = lo;
+  for (let i = 0; i < FONT_SIZE_BINARY_SEARCH_ITERATIONS; i++) {
+    const mid = Math.floor((lo + hi) / 2);
+    probe.style.fontSize = mid + 'px';
+    // Chip font = 50% of equation font; circle diameter = 0.5 × 1.3 × mid = 0.65 × mid.
+    // +14px safety margin absorbs sub-pixel rounding between the probe and the live element.
+    const maxEquH = Math.max(16, totalH - mid * 0.65 - 16 - 14);
+    if (probe.offsetWidth <= availW && probe.offsetHeight <= maxEquH) {
+      best = mid; lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  document.body.removeChild(probe);
+  document.documentElement.style.setProperty('--problem-font-size', best + 'px');
+}
+
+/* ============================================================
+   FORMAT HELPERS
+   ============================================================ */
+const DEFAULT_COL_COLORS = { B: '#1565c0', I: '#2e7d32', N: '#e65100', G: '#6a1b9a', O: '#b71c1c' };
+let COL_COLORS = { ...DEFAULT_COL_COLORS };
+
+function applyCardColors() {
+  const colors = state.settings.cardColors;
+  Object.assign(COL_COLORS, colors);
+  BINGO_COLS.forEach(col => {
+    document.documentElement.style.setProperty(`--col-${col}`, colors[col]);
+    const input = document.getElementById(`pv-color-${col}`);
+    if (input) input.value = colors[col];
+    const badge = document.querySelector(`.pv-color-row[data-col="${col}"] .pv-color-col-label`);
+    if (badge) badge.style.background = colors[col];
+    // Show reset button only when color differs from default
+    const resetBtn = document.querySelector(`.pv-color-row[data-col="${col}"] .pv-color-reset`);
+    if (resetBtn) resetBtn.hidden = (colors[col] === DEFAULT_COL_COLORS[col]);
+  });
+  updateWorkThumb();
+}
+
+function applyFont() {
+  const cfg = FONT_OPTIONS[state.settings.font] || FONT_OPTIONS.default;
+  document.documentElement.style.setProperty('--app-font', cfg.cssStack);
+}
+
+// Populate a <select> with FONT_OPTIONS, styling each option in its own font.
+function populateFontSelect(sel) {
+  sel.innerHTML = '';
+  sel.dataset.fontSelect = '';
+  Object.entries(FONT_OPTIONS).forEach(([key, cfg]) => {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = cfg.label;
+    opt.style.fontFamily = cfg.cssStack;
+    sel.appendChild(opt);
+  });
+  sel.value = state.settings.font;
+  sel.style.fontFamily = FONT_OPTIONS[state.settings.font].cssStack;
+}
+
+// Apply a font choice + sync every font-select in the DOM (settings panel + print view).
+function setFont(key) {
+  state.settings.font = key;
+  saveSettings();
+  applyFont();
+  const cfg = FONT_OPTIONS[key] || FONT_OPTIONS.default;
+  document.querySelectorAll('[data-font-select]').forEach(sel => {
+    sel.value = key;
+    sel.style.fontFamily = cfg.cssStack;
+  });
+}
+
+// Cache value is a Promise resolving to { normal: b64, bold?: b64 }.
+// Storing the Promise itself lets concurrent callers await the same in-flight fetch
+// instead of triggering parallel network requests for the same TTF.
+const _pdfFontCache = new Map();
+
+async function ensurePdfFont(doc, fontKey) {
+  const cfg = FONT_OPTIONS[fontKey] || FONT_OPTIONS.default;
+  if (!cfg.pdfUrls) return cfg.pdfName;  // built-in helvetica — nothing to load
+
+  if (!_pdfFontCache.has(fontKey)) {
+    _pdfFontCache.set(fontKey, (async () => {
+      const buffers = {};
+      for (const [style, url] of Object.entries(cfg.pdfUrls)) {
+        const buf = await fetch(url).then(r => {
+          if (!r.ok) throw new Error(`Failed to load ${cfg.label} (${style})`);
+          return r.arrayBuffer();
+        });
+        // Chunked base64 to avoid call-stack overflow on large buffers
+        const bytes = new Uint8Array(buf);
+        let bin = '';
+        const CHUNK = 0x8000;
+        for (let i = 0; i < bytes.length; i += CHUNK) {
+          bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+        }
+        buffers[style] = btoa(bin);
+      }
+      return buffers;
+    })().catch(err => {
+      // Don't poison the cache on failure — drop the entry so a retry can run.
+      _pdfFontCache.delete(fontKey);
+      throw err;
+    }));
+  }
+
+  const buffers  = await _pdfFontCache.get(fontKey);
+  const normalB64 = buffers.normal;
+  const boldB64   = buffers.bold || buffers.normal;  // single-weight fonts alias normal→bold
+  doc.addFileToVFS(`${cfg.pdfName}-Regular.ttf`, normalB64);
+  doc.addFont(`${cfg.pdfName}-Regular.ttf`, cfg.pdfName, 'normal');
+  doc.addFileToVFS(`${cfg.pdfName}-Bold.ttf`, boldB64);
+  doc.addFont(`${cfg.pdfName}-Bold.ttf`, cfg.pdfName, 'bold');
+  return cfg.pdfName;
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render() {
+  applySettings();
+  renderProgress();
+  renderBoard();
+  renderProblem();
+  updateTimerDisplay();
+}
+
+function applySettings() {
+  const s = state.settings;
+  document.documentElement.setAttribute('data-theme', s.theme);
+  document.documentElement.style.setProperty('--rbs', s.recentBallScale ?? 1.0);
+  document.getElementById('bottom-nav').hidden = !s.showNavButtons;
+  const isRecent = s.boardMode === 'recent';
+  const panelVisible = isRecent ? (s.showBoard && s.showRecentBalls) : s.showBoard;
+  document.getElementById('board-panel').classList.toggle('hidden', !panelVisible);
+  document.getElementById('board-grid').classList.toggle('mode-hidden', isRecent);
+  document.getElementById('recent-balls-strip').classList.toggle('mode-hidden', !isRecent);
+}
+
+function renderProgress() {
+  const el = document.getElementById('progress-display');
+  if (!state.settings.showProgress) { el.textContent = ''; return; }
+  const p = currentProblem();
+  if (!p) { el.textContent = `${state.problems.length} problems loaded`; return; }
+
+  const calledCount = Object.values(state.calledAnswers).reduce((s, set) => s + set.size, 0);
+  const totalAnswers = Object.values(state.columnAnswers).reduce((s, arr) => s + arr.length, 0);
+  const remaining = totalAnswers - calledCount;
+  el.textContent = `${calledCount} of ${totalAnswers} called • ${remaining} remaining`;
+}
+
+function renderBoard() {
+  if (state.settings.boardMode === 'recent') {
+    renderRecentBalls();
+  } else {
+    renderBoardGrid();
+  }
+}
+
+function createBallCardEl(p) {
+  const showAnswer = state.settings.boardContent === 'answers';
+  const card = document.createElement('div');
+  card.className = 'recent-ball-card';
+  const circle = document.createElement('div');
+  circle.className = 'recent-ball-circle';
+  circle.setAttribute('data-col', p.column);
+  circle.textContent = p.column;
+  const label = document.createElement('div');
+  label.className = 'recent-ball-label';
+  renderMath(label, showAnswer ? String(p.answer) : p.problem);
+  card.appendChild(circle);
+  card.appendChild(label);
+  return card;
+}
+
+// Tracks the most recently animated problem so settings re-renders, replays,
+// and idempotent renders don't retrigger the chip-drop animation.
+let _lastAnimatedKey = null;
+
+// Row ID counter for the set editor (increments forever; never reused).
+let _nextRowId = 1;
+function newRowId() { return _nextRowId++; }
+
+function triggerBallAnimation(chip, textEl, variant) {
+  // Cancel any in-flight animation so rapid Next presses restart cleanly.
+  chip.classList.remove('chip-anim-drop','chip-anim-pop','chip-anim-roll');
+  textEl.classList.remove('text-anim-rise');
+  // Force reflow so re-adding the class restarts at 0%.
+  void chip.offsetWidth;
+  // Apply duration from audio file metadata (auto-updated on loadedmetadata).
+  const dur = ANIM_DURATIONS[variant];
+  if (dur) {
+    chip.style.animationDuration = dur + 's';
+    // Text rise: proportional to chip duration (delay ≈30%, duration ≈56%)
+    textEl.style.animationDelay    = (dur * 0.30).toFixed(3) + 's';
+    textEl.style.animationDuration = (dur * 0.56).toFixed(3) + 's';
+  }
+  chip.classList.add('chip-anim-' + variant);
+  textEl.classList.add('text-anim-rise');
+}
+
+function renderRecentBalls() {
+  const strip = document.getElementById('recent-balls-strip');
+  const n = state.settings.recentCount;
+  const ci = state.currentIndex;
+  const isNewCall = ci > _lastRenderedIndex && ci >= 0;
+  _lastRenderedIndex = ci;
+
+  const visible = ci > 0
+    ? state.history.slice(Math.max(0, ci - n), ci)
+    : [];
+
+  if (!isNewCall || strip.children.length === 0) {
+    strip.innerHTML = '';
+    [...visible].reverse().forEach(p => strip.appendChild(createBallCardEl(p)));
+    return;
+  }
+
+  const willOverflow = strip.children.length >= n;
+  const allExisting  = [...strip.children];
+  const exiting      = willOverflow ? allExisting[allExisting.length - 1] : null;
+
+  // Pull exiting card out of flex flow NOW so it doesn't affect layout
+  // during FLIP measurement — removing it later won't cause any reflow
+  if (exiting) {
+    const er = exiting.getBoundingClientRect();
+    const sr = strip.getBoundingClientRect();
+    Object.assign(exiting.style, {
+      position: 'absolute',
+      left: (er.left - sr.left) + 'px',
+      top:  (er.top  - sr.top)  + 'px',
+      width: er.width + 'px',
+      margin: '0',
+      pointerEvents: 'none',
+    });
+  }
+
+  const staying = allExisting.filter(c => c !== exiting);
+
+  // FLIP step 1: record positions now that exiting is out of flow
+  const firstLefts = staying.map(c => c.getBoundingClientRect().left);
+
+  // Insert new card at left, invisible
+  const newCard = createBallCardEl(visible[visible.length - 1]);
+  Object.assign(newCard.style, { opacity: '0', transform: 'translateX(-70px) scale(0.78)', transition: 'none' });
+  strip.prepend(newCard);
+
+  // FLIP step 2: measure shifted positions, apply inverse transforms
+  staying.forEach((card, i) => {
+    const dx = firstLefts[i] - card.getBoundingClientRect().left;
+    card.style.transition = 'none';
+    card.style.transform = `translateX(${dx}px)`;
+  });
+
+  // Force reflow
+  strip.offsetWidth;
+
+  // FLIP step 3: play — all staying cards slide smoothly, new card springs in
+  requestAnimationFrame(() => {
+    const slide = 'transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    staying.forEach(c => { c.style.transition = slide; c.style.transform = ''; });
+    Object.assign(newCard.style, {
+      transition: 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease',
+      transform: '', opacity: '1',
+    });
+
+    // Fade out the absolutely-positioned exiting card, then remove it
+    // Since it's out of flex flow, its removal causes zero layout shift
+    if (exiting) {
+      Object.assign(exiting.style, {
+        transition: 'transform 0.42s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.32s ease',
+        transform: 'translateX(90px) scale(0.78)',
+        opacity: '0',
+      });
+      setTimeout(() => exiting.remove(), 450);
+    }
+  });
+}
+
+function renderBoardGrid() {
+  const grid = document.getElementById('board-grid');
+  const cols = BINGO_COLS.filter(c => state.columnAnswers[c]);
+  if (cols.length === 0) { grid.innerHTML = ''; return; }
+
+  const showProblems = state.settings.boardContent === 'problems';
+
+  // Build a map from (col, answer) → problem text for the called entries
+  const calledProblemMap = {};
+  for (const p of state.history) {
+    const key = `${p.column}:${p.answer}`;
+    if (!calledProblemMap[key]) calledProblemMap[key] = p.problem;
+  }
+
+  grid.innerHTML = cols.map(col => {
+    const answers = state.columnAnswers[col];
+    const called = state.calledAnswers[col] || new Set();
+
+    if (called.size === 0) return '';
+
+    const cells = answers.map(a => {
+      if (!called.has(a)) return '';
+      const key = `${col}:${a}`;
+      const label = showProblems ? (calledProblemMap[key] || String(a)) : String(a);
+      const labelHtml = label.includes('\\') && typeof katex !== 'undefined'
+        ? katex.renderToString(label, { throwOnError: false, displayMode: false })
+        : escHtml(label);
+      return `<div class="board-cell called" style="background:var(--col-${col})" title="${col} ${a}">${labelHtml}</div>`;
+    }).join('');
+
+    return `<div class="board-col">
+      <div class="board-col-header" style="background:var(--col-${col})">${col}</div>
+      ${cells}
+    </div>`;
+  }).join('');
+}
+
+function renderProblem() {
+  const p = currentProblem();
+  const startPrompt = document.getElementById('start-prompt');
+  const card = document.getElementById('problem-card');
+
+  if (!p) {
+    startPrompt.hidden = false;
+    card.hidden = true;
+    document.getElementById('btn-prev').disabled = true;
+    document.getElementById('btn-next').disabled = false;
+    return;
+  }
+
+  startPrompt.hidden = true;
+  card.hidden = false;
+  card.classList.toggle('replay', isReplay());
+
+  // Replay badge
+  document.getElementById('replay-badge').hidden = !isReplay();
+
+  // Column chip
+  const chip = document.getElementById('col-chip');
+  const problemTextEl = document.getElementById('problem-text');
+  chip.hidden = !state.settings.showColumn;
+  if (state.settings.showColumn) {
+    chip.textContent = p.column;
+    chip.setAttribute('data-col', p.column);
+  }
+
+  // Problem text
+  renderMath(problemTextEl, p.problem);
+
+  // Animate the ball + play sound only on a genuinely new arrival
+  // (not replays or settings re-renders). Animation skips if user picked 'none'.
+  const animKey = state.currentIndex + ':' + p.column + ':' + p.problem;
+  const isFreshArrival = !isReplay() && animKey !== _lastAnimatedKey;
+  if (isFreshArrival) {
+    const variant = state.settings.ballAnimation;
+    if (variant && variant !== 'none') {
+      triggerBallAnimation(chip, problemTextEl, variant);
+    }
+    audio.play('ballDrop');
+    _lastAnimatedKey = animKey;
+  }
+
+  // Answer section
+  const answerReveal = document.getElementById('answer-reveal');
+  answerReveal.hidden = !state.answerVisible;
+  if (state.answerVisible) {
+    const valEl = document.getElementById('answer-value');
+    renderMath(valEl, String(p.answer));
+    valEl.setAttribute('data-col', p.column);
+  }
+
+  // Game over message
+  document.getElementById('game-over-msg').hidden = !state.gameOver;
+
+  // Nav buttons
+  document.getElementById('btn-prev').disabled = state.currentIndex <= 0;
+  document.getElementById('btn-next').disabled = !canGoNext();
+}
+
+/* ============================================================
+   SETTINGS PANEL RENDER
+   ============================================================ */
+function renderSettings() {
+  const s = state.settings;
+  const ca = state.columnAnswers;
+  const colCounts = BINGO_COLS
+    .filter(c => ca[c])
+    .map(c => `${c}: ${ca[c].length}`)
+    .join(' · ');
+  const totalProblems = state.problems.length;
+
+  document.getElementById('settings-body').innerHTML = `
+    <div class="settings-section">
+      <span class="settings-label">Auto-Advance Timer</span>
+      <div class="settings-row">
+        <label for="s-auto-on">Enable auto-advance</label>
+        <input type="checkbox" id="s-auto-on" ${s.autoAdvanceOn ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-auto-interval">Interval</label>
+        <select id="s-auto-interval">
+          ${[10,20,30,45,60].map(v => `<option value="${v}" ${s.autoAdvanceInterval===v?'selected':''}>${v} seconds</option>`).join('')}
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Display</span>
+      <div class="settings-row">
+        <label for="s-show-col">Show column letter (B/I/N/G/O)</label>
+        <input type="checkbox" id="s-show-col" ${s.showColumn ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-show-nav">Show Next / Check Answer / Back buttons</label>
+        <input type="checkbox" id="s-show-nav" ${s.showNavButtons ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-show-progress">Show call count</label>
+        <input type="checkbox" id="s-show-progress" ${s.showProgress ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label for="s-show-recent">Show recently called numbers</label>
+        <input type="checkbox" id="s-show-recent" ${s.showRecentBalls ? 'checked' : ''}>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Animation &amp; Sound</span>
+      <div class="settings-row">
+        <label for="s-ball-anim">Ball entrance</label>
+        <select id="s-ball-anim">
+          <option value="drop"${s.ballAnimation==='drop'?' selected':''}>Drop &amp; bounce</option>
+          <option value="pop"${s.ballAnimation==='pop'?' selected':''}>Pop spring</option>
+          <option value="roll"${s.ballAnimation==='roll'?' selected':''}>Roll-in</option>
+          <option value="none"${s.ballAnimation==='none'?' selected':''}>None</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <label for="s-sound-enabled">Enable sound effects</label>
+        <input type="checkbox" id="s-sound-enabled" ${s.soundEnabled ? 'checked' : ''}>
+      </div>
+      <div class="settings-row" id="s-sound-vol-row"${s.soundEnabled ? '' : ' hidden'}>
+        <label for="s-sound-volume">Volume</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="range" id="s-sound-volume" min="0" max="1" step="0.05"
+                 value="${s.soundVolume}" style="width:90px;accent-color:var(--primary)">
+          <span id="s-sound-volume-val" style="min-width:38px;text-align:right;font-weight:700;">${Math.round(s.soundVolume*100)}%</span>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label for="s-sound-tick">Tick sound (last 3s of auto-advance)</label>
+        <input type="checkbox" id="s-sound-tick" ${s.soundTick ? 'checked' : ''}>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Called Numbers Board <kbd>B</kbd></span>
+      <div class="settings-row">
+        <label for="s-show-board">Show board</label>
+        <input type="checkbox" id="s-show-board" ${s.showBoard ? 'checked' : ''}>
+      </div>
+      <div class="settings-row">
+        <label>Board style <kbd>K</kbd></label>
+        <div class="seg-group">
+          <button class="seg-btn${s.boardMode==='recent'?' active':''}" data-board-mode="recent">Recent Balls</button>
+          <button class="seg-btn${s.boardMode==='grid'?' active':''}" data-board-mode="grid">Grid</button>
+        </div>
+      </div>
+      <div class="settings-row" id="s-recent-count-row"${s.boardMode==='recent'?'':' hidden'}>
+        <label>Show last N balls</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <button class="icon-btn" id="s-recent-dec">−</button>
+          <span id="s-recent-val" style="min-width:24px;text-align:center;font-weight:700;">${s.recentCount}</span>
+          <button class="icon-btn" id="s-recent-inc">+</button>
+        </div>
+      </div>
+      <div class="settings-row" id="s-rbs-row"${s.boardMode==='recent'?'':' hidden'}>
+        <label for="s-rbs-slider">Recent numbers size</label>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="range" id="s-rbs-slider" min="0.5" max="2.5" step="0.1"
+            value="${s.recentBallScale ?? 1.5}" style="width:90px;accent-color:var(--primary)">
+          <span id="s-rbs-val" style="min-width:34px;text-align:right;font-weight:700;">${Math.round((s.recentBallScale ?? 1.5) * 100)}%</span>
+        </div>
+      </div>
+      <div class="settings-row">
+        <label>Board shows</label>
+        <div class="seg-group">
+          <button class="seg-btn${s.boardContent==='problems'?' active':''}" data-board-content="problems">Problems</button>
+          <button class="seg-btn${s.boardContent==='answers'?' active':''}" data-board-content="answers">Answers</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Font</span>
+      <div class="settings-row">
+        <label for="s-font">Family</label>
+        <select id="s-font"></select>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Theme</span>
+      <div class="seg-group">
+        <button class="seg-btn${s.theme==='light'?' active':''}" data-theme-val="light">Light</button>
+        <button class="seg-btn${s.theme==='dark'?' active':''}" data-theme-val="dark">Dark</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <span class="settings-label">Game</span>
+      <button class="btn-danger" id="settings-reset">Reset Game</button>
+    </div>
+
+  `;
+
+  // Wire settings panel events
+  const sBody = document.getElementById('settings-body');
+  document.getElementById('s-auto-on').onchange = e => {
+    state.settings.autoAdvanceOn = e.target.checked;
+    saveSettings();
+    if (!e.target.checked) stopTimer();
+    else if (currentProblem()) startTimer();
+    render();
+  };
+  document.getElementById('s-auto-interval').onchange = e => {
+    state.settings.autoAdvanceInterval = parseInt(e.target.value, 10);
+    saveSettings();
+    if (state.settings.autoAdvanceOn && currentProblem()) { stopTimer(); startTimer(); }
+    render();
+  };
+  document.getElementById('s-show-col').onchange = e => {
+    state.settings.showColumn = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-show-nav').onchange = e => {
+    state.settings.showNavButtons = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-show-progress').onchange = e => {
+    state.settings.showProgress = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-show-recent').onchange = e => {
+    state.settings.showRecentBalls = e.target.checked;
+    saveSettings(); render();
+  };
+  document.getElementById('s-show-board').onchange = e => {
+    state.settings.showBoard = e.target.checked;
+    saveSettings(); render();
+  };
+  sBody.querySelectorAll('[data-board-mode]').forEach(btn => {
+    btn.onclick = () => {
+      state.settings.boardMode = btn.dataset.boardMode;
+      _lastRenderedIndex = -1; // force a fresh static render of the strip
+      saveSettings(); renderSettings(); render();
+    };
+  });
+  const recentDec = sBody.querySelector('#s-recent-dec');
+  if (recentDec) {
+    recentDec.onclick = () => {
+      if (state.settings.recentCount > 1) {
+        state.settings.recentCount--;
+        saveSettings();
+        sBody.querySelector('#s-recent-val').textContent = state.settings.recentCount;
+        render();
+      }
+    };
+    sBody.querySelector('#s-recent-inc').onclick = () => {
+      if (state.settings.recentCount < 10) {
+        state.settings.recentCount++;
+        saveSettings();
+        sBody.querySelector('#s-recent-val').textContent = state.settings.recentCount;
+        render();
+      }
+    };
+  }
+  sBody.querySelectorAll('[data-board-content]').forEach(btn => {
+    btn.onclick = () => {
+      state.settings.boardContent = btn.dataset.boardContent;
+      saveSettings(); renderSettings(); render();
+    };
+  });
+  const rbsSlider = sBody.querySelector('#s-rbs-slider');
+  if (rbsSlider) {
+    rbsSlider.oninput = () => {
+      state.settings.recentBallScale = parseFloat(rbsSlider.value);
+      sBody.querySelector('#s-rbs-val').textContent = Math.round(state.settings.recentBallScale * 100) + '%';
+      applySettings();
+      saveSettings();
+    };
+  }
+
+  // Animation & Sound handlers
+  sBody.querySelector('#s-ball-anim').onchange = e => {
+    state.settings.ballAnimation = e.target.value;
+    saveSettings();
+  };
+  sBody.querySelector('#s-sound-enabled').onchange = e => {
+    state.settings.soundEnabled = e.target.checked;
+    saveSettings();
+    // Show/hide dependent rows
+    const volRow = document.getElementById('s-sound-vol-row');
+    if (volRow) volRow.hidden = !state.settings.soundEnabled;
+  };
+  const volSlider = sBody.querySelector('#s-sound-volume');
+  if (volSlider) {
+    volSlider.oninput = () => {
+      state.settings.soundVolume = parseFloat(volSlider.value);
+      sBody.querySelector('#s-sound-volume-val').textContent =
+        Math.round(state.settings.soundVolume * 100) + '%';
+      audio.setVolume();
+      saveSettings();
+    };
+  }
+  sBody.querySelector('#s-sound-tick').onchange = e => {
+    state.settings.soundTick = e.target.checked;
+    saveSettings();
+  };
+  const sFont = sBody.querySelector('#s-font');
+  if (sFont) {
+    populateFontSelect(sFont);
+    sFont.onchange = e => setFont(e.target.value);
+  }
+  sBody.querySelectorAll('[data-theme-val]').forEach(btn => {
+    btn.onclick = () => {
+      state.settings.theme = btn.dataset.themeVal;
+      saveSettings(); renderSettings(); render();
+    };
+  });
+  document.getElementById('settings-reset').onclick = () => {
+    closeOverlay('settings-overlay');
+    showConfirm();
+  };
+}
+
+/* ============================================================
+   BINGO CARD GENERATION
+   ============================================================ */
+function generateBingoCards(n) {
+  const cols = BINGO_COLS;
+  return Array.from({ length: n }, () =>
+    cols.map((col, ci) => {
+      const pool = [...(state.columnAnswers[col] || [])];
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      const five = pool.slice(0, 5);
+      if (ci === 2) five[2] = null; // FREE center
+      return five;
+    })
+  );
+}
+
+async function pvDownloadCards() {
+  // Re-entry guard — async work should never overlap with itself.
+  if (pvDownloadCards._busy) return;
+  const n        = parseInt(document.getElementById('pv-count').value, 10);
+  const style    = document.querySelector('.pv-style-card.active')?.dataset.pvStyle || 'full';
+  const color    = document.querySelector('[data-pv-color].active')?.dataset.pvColor !== 'bw';
+  const showNums = document.getElementById('pv-show-numbers')?.checked ?? true;
+  const workType = document.querySelector('[data-pv-work].active')?.dataset.pvWork || 'lined';
+  const errEl    = document.getElementById('pv-dl-error');
+  errEl.hidden   = true;
+
+  if (isNaN(n) || n < 1) {
+    errEl.textContent = 'Enter a valid card count (1\u2013200).'; errEl.hidden = false; return;
+  }
+  const thinCols = BINGO_COLS.filter(c => (state.columnAnswers[c] || []).length < 5);
+  if (thinCols.length) {
+    errEl.textContent = `Not enough answers in columns: ${thinCols.join(', ')} (need \u2265 5 each).`;
+    errEl.hidden = false; return;
+  }
+  // Duplicate-answer gate: each (column, answer) pair must be unique within its column.
+  const seenInCol = {};
+  const dupCols = new Set();
+  for (const p of state.problems) {
+    const key = p.column + ':' + p.answer;
+    if (seenInCol[key]) dupCols.add(p.column);
+    seenInCol[key] = true;
+  }
+  if (dupCols.size) {
+    errEl.textContent = `Duplicate answers in column${dupCols.size > 1 ? 's' : ''} ${[...dupCols].sort().join(', ')}. Each column must have unique answers \u2014 fix in the editor before downloading.`;
+    errEl.hidden = false; return;
+  }
+  if (typeof jspdf === 'undefined') {
+    errEl.textContent = 'PDF library not loaded yet \u2014 please try again in a moment.';
+    errEl.hidden = false; return;
+  }
+
+  const callerSheet  = document.getElementById('pv-caller-sheet')?.checked ?? true;
+  const lineSpacing  = parseFloat(document.getElementById('pv-work-scale')?.value ?? 7);
+  const cards = generateBingoCards(n);
+  // Mark busy + show progress on the button so the user knows the PDF is being built
+  // (CDN font fetch + jsPDF render can take ~50–500ms on first use).
+  pvDownloadCards._busy = true;
+  const btn = document.getElementById('pv-download-btn');
+  const origLabel = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="icon" aria-hidden="true"><use href="#icon-download"/></svg> Generating PDF…';
+  }
+  try {
+    await generateCardsPDF(cards, { style, color, showCardNumbers: showNums, workType, callerSheet, lineSpacing, fontKey: state.settings.font });
+  } catch (e) {
+    errEl.textContent = `Could not generate PDF: ${e.message || e}`;
+    errEl.hidden = false;
+  } finally {
+    pvDownloadCards._busy = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = origLabel;
+    }
+  }
+}
+
+function updateWorkPreview() {
+  const canvas = document.getElementById('pv-work-preview');
+  if (!canvas) return;
+  const workType = document.querySelector('[data-pv-work].active')?.dataset.pvWork || 'lined';
+  const spacing  = parseFloat(document.getElementById('pv-work-scale')?.value ?? 7);
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (workType === 'blank') return;
+  const px = spacing * (H / 30); // scale so ~4 lines fill the preview at default 7mm
+  ctx.strokeStyle = '#c8c8c8';
+  ctx.lineWidth = 0.9;
+  for (let y = px; y < H; y += px) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  if (workType === 'grid') {
+    for (let x = px; x < W; x += px) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+  }
+  updateWorkThumb();
+}
+
+function updateWorkThumb() {
+  const canvas = document.getElementById('pv-work-thumb');
+  if (!canvas) return;
+
+  // Draw at 4× for sharpness on zoom; CSS width/height via .pv-style-thumb stays 54×42
+  const LW = 54, LH = 42, DPR = 4;
+  canvas.width  = LW * DPR;
+  canvas.height = LH * DPR;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, LW, LH);
+
+  const workType = document.querySelector('[data-pv-work].active')?.dataset.pvWork || 'lined';
+  const spacing  = parseFloat(document.getElementById('pv-work-scale')?.value ?? 7);
+
+  const COL_COLORS_THUMB = BINGO_COLS.map(c => COL_COLORS[c]);
+
+  ctx.clearRect(0, 0, LW, LH);
+
+  // Work-area line pixel spacing: map real mm to thumbnail pixels
+  // At 3mm → ~1.8px apart (fine); at 15mm → ~5.5px apart (wide)
+  const linePx = 1.8 + (spacing - 3) / (15 - 3) * (5.5 - 1.8);
+
+  // ── Left: one bingo card (matches Half Page SVG proportions, square cells) ──
+  const cx = 2, cy = 7, CW = 22;
+  const HEADER_H = 5;
+  const colW = CW / 5;               // 4.4
+  const CH = HEADER_H + 5 * colW;   // 5 + 22 = 27
+
+  // Card background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(cx, cy, CW, CH);
+  // BINGO header
+  COL_COLORS_THUMB.forEach((color, i) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(cx + i * colW, cy, colW, HEADER_H);
+  });
+  // Vertical grid lines
+  ctx.strokeStyle = '#e0e0e0';
+  ctx.lineWidth = 0.4;
+  for (let i = 1; i < 5; i++) {
+    const x = cx + i * colW;
+    ctx.beginPath(); ctx.moveTo(x, cy + HEADER_H); ctx.lineTo(x, cy + CH); ctx.stroke();
+  }
+  // Horizontal grid lines (square cells: step = colW)
+  for (let i = 1; i < 5; i++) {
+    const y = cy + HEADER_H + i * colW;
+    ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx + CW, y); ctx.stroke();
+  }
+  // Card outline
+  ctx.strokeStyle = '#bbbbbb';
+  ctx.lineWidth = 0.6;
+  ctx.strokeRect(cx + 0.3, cy + 0.3, CW - 0.6, CH - 0.6);
+
+  // ── Right: work area (matches Half Page SVG right card position) ──
+  const wx = 30, wy = 7, WW = 22, WH = 27;
+
+  // Work area background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(wx, wy, WW, WH);
+
+  // Interior lines
+  if (workType === 'lined' || workType === 'grid') {
+    ctx.strokeStyle = '#cccccc';
+    ctx.lineWidth = 0.4;
+    for (let y = wy + linePx; y < wy + WH - 0.3; y += linePx) {
+      ctx.beginPath(); ctx.moveTo(wx + 0.5, y); ctx.lineTo(wx + WW - 0.5, y); ctx.stroke();
+    }
+    if (workType === 'grid') {
+      for (let x = wx + linePx; x < wx + WW - 0.3; x += linePx) {
+        ctx.beginPath(); ctx.moveTo(x, wy); ctx.lineTo(x, wy + WH); ctx.stroke();
+      }
+    }
+  }
+  // Work area border
+  ctx.strokeStyle = '#bbbbbb';
+  ctx.lineWidth = 0.6;
+  ctx.strokeRect(wx + 0.3, wy + 0.3, WW - 0.6, WH - 0.6);
+}
+
+function renderCheckAnswers() {
+  // Reset quick-checker state
+  const input = document.getElementById('ca-answer-input');
+  if (input) { input.value = ''; }
+  const statusEl = document.getElementById('ca-status');
+  if (statusEl) { statusEl.textContent = ''; statusEl.className = ''; }
+
+  // Collapse the full sheet
+  const fullSheet = document.getElementById('ca-full-sheet');
+  const toggleBtn = document.getElementById('ca-toggle-full-btn');
+  if (fullSheet) fullSheet.hidden = true;
+  if (toggleBtn) toggleBtn.classList.remove('expanded');
+
+  // Render the full sheet content (hidden until expanded)
+  renderCaFullSheet();
+
+  openOverlay('check-answers-overlay');
+
+  // Focus the answer input after opening
+  requestAnimationFrame(() => input?.focus());
+}
+
+function renderCaFullSheet() {
+  const cols = BINGO_COLS;
+  const called = {};
+  cols.forEach(c => called[c] = []);
+
+  const ci = state.currentIndex;
+  if (ci >= 0) {
+    state.history.slice(0, ci + 1).forEach(p => {
+      if (called[p.column]) called[p.column].push(p);
+    });
+  }
+
+  const container = document.getElementById('ca-columns');
+  container.innerHTML = cols.map(col => {
+    const rows = called[col];
+    const body = rows.length
+      ? rows.map(p => `<div class="ca-row"><span class="ca-problem">${escHtml(p.problem)}</span><span class="ca-answer">${escHtml(String(p.answer))}</span></div>`).join('')
+      : `<div class="ca-empty">None called yet</div>`;
+    return `
+      <div class="ca-col">
+        <div class="ca-col-header" style="background:var(--col-${col})">${col}</div>
+        <div class="ca-col-body">${body}</div>
+      </div>`;
+  }).join('');
+}
+
+function updateCaStatus() {
+  const input   = document.getElementById('ca-answer-input');
+  const statusEl = document.getElementById('ca-status');
+  if (!input || !statusEl) return;
+
+  const raw = input.value.trim();
+  if (raw === '') {
+    statusEl.textContent = '';
+    statusEl.className   = '';
+    return;
+  }
+
+  const num = parseFloat(raw);
+  if (isNaN(num)) {
+    statusEl.textContent = '';
+    statusEl.className   = '';
+    return;
+  }
+
+  const col = document.querySelector('.ca-col-btn.active')?.dataset.col || 'B';
+  const calledSet = state.calledAnswers[col] || new Set();
+  const isCalled  = calledSet.has(num);
+
+  statusEl.textContent = isCalled ? '✓ Called' : '✗ Not called';
+  statusEl.className   = isCalled ? 'ca-called' : 'ca-not-called';
+}
+
+function hexToRgb(hex) {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function getColRgb(col) {
+  const hex = (state.settings.cardColors || DEFAULT_COL_COLORS)[col] || DEFAULT_COL_COLORS[col];
+  return hexToRgb(hex);
+}
+const BW_HEADER_RGB = [51, 51, 51];
+
+/**
+ * Draw one bingo card at (x, y) with the given card width.
+ * Cells are always square (cellH = cellW). Fonts scale with cell size so
+ * full-page and half-page layouts both look balanced.
+ */
+function drawBingoCard(doc, { x, y, cardW, card, cardIdx, headerH, showCardNumbers, color, pdfFont = 'helvetica' }) {
+  const cols  = BINGO_COLS;
+  const cellW = cardW / 5;
+  const cellH = cellW;
+
+  // Font sizes scale with cell geometry — generous for readability
+  const headerFont    = Math.max(14, Math.round(headerH * 1.5));
+  const dataFont      = Math.max(11, Math.round(cellW  * 0.5));
+  const dataFontSmall = Math.max(9,  Math.round(cellW  * 0.38));
+  const freeFont      = Math.max(10, Math.round(cellW  * 0.42));
+
+  doc.setLineWidth(0.4);
+  doc.setDrawColor(153, 153, 153);
+
+  // Header row (FD so the BINGO band shares the same outline as the grid)
+  cols.forEach((col, ci) => {
+    const cx = x + ci * cellW;
+    doc.setFillColor(...(color ? getColRgb(col) : BW_HEADER_RGB));
+    doc.rect(cx, y, cellW, headerH, 'FD');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(pdfFont,'bold');
+    doc.setFontSize(headerFont);
+    doc.text(col, cx + cellW / 2, y + headerH / 2, { align: 'center', baseline: 'middle' });
+  });
+
+  // Data cells (FREE stays white — no shading)
+  for (let row = 0; row < 5; row++) {
+    for (let ci = 0; ci < 5; ci++) {
+      const cx     = x + ci * cellW;
+      const cy     = y + headerH + row * cellH;
+      const val    = card[ci][row];
+      const isFree = val === null;
+
+      doc.setFillColor(255, 255, 255);
+      doc.rect(cx, cy, cellW, cellH, 'FD');
+
+      doc.setTextColor(30, 30, 30);
+      doc.setFont(pdfFont,'bold');
+      if (isFree) {
+        doc.setFontSize(freeFont);
+        doc.text('FREE', cx + cellW / 2, cy + cellH / 2, { align: 'center', baseline: 'middle' });
+      } else {
+        doc.setFontSize(String(val).length > 3 ? dataFontSmall : dataFont);
+        doc.text(String(val), cx + cellW / 2, cy + cellH / 2, { align: 'center', baseline: 'middle' });
+      }
+    }
+  }
+
+  // Outer card border — closes any hairline gaps and unifies header + grid
+  doc.setLineWidth(0.6);
+  doc.rect(x, y, cardW, headerH + 5 * cellH);
+
+  // Card number label below table
+  if (showCardNumbers) {
+    const labelY = y + headerH + 5 * cellH + Math.max(5, headerH * 0.45);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont(pdfFont,'normal');
+    doc.setFontSize(9);
+    doc.text(`Card ${cardIdx + 1}`, x + cardW / 2, labelY, { align: 'center' });
+  }
+}
+
+/**
+ * Draw a "show your work" area. workType: 'lined' | 'grid' | 'blank'
+ */
+function drawWorkArea(doc, { x, y, w, h, workType = 'lined', lineSpacing = 7 }) {
+  if (workType !== 'blank') {
+    // Snap to whole squares so no partial cells appear at the edges
+    const snapH = Math.floor(h / lineSpacing) * lineSpacing;
+    const snapW = workType === 'grid' ? Math.floor(w / lineSpacing) * lineSpacing : w;
+
+    doc.setDrawColor(210, 210, 210);
+    doc.setLineWidth(0.2);
+    for (let ly = y + lineSpacing; ly <= y + snapH; ly += lineSpacing) {
+      doc.line(x, ly, x + snapW, ly);
+    }
+    if (workType === 'grid') {
+      for (let lx = x + lineSpacing; lx <= x + snapW; lx += lineSpacing) {
+        doc.line(lx, y, lx, y + snapH);
+      }
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.4);
+      doc.rect(x, y, snapW, snapH);
+    }
+  } else {
+    doc.setDrawColor(180, 180, 180);
+    doc.setLineWidth(0.4);
+    doc.rect(x, y, w, h);
+  }
+}
+
+function drawCallerSheet(doc, problems, color, pdfFont = 'helvetica') {
+  const { jsPDF } = jspdf;
+  doc.addPage('letter', 'portrait');
+  const pageW = 215.9, pageH = 279.4, margin = 14;
+  const cols = BINGO_COLS;
+
+  // Title
+  doc.setFont(pdfFont,'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(40, 40, 40);
+  doc.text('Caller Sheet', pageW / 2, margin, { align: 'center' });
+
+  if (state.setName) {
+    doc.setFontSize(9);
+    doc.setFont(pdfFont,'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text(state.setName, pageW / 2, margin + 6, { align: 'center' });
+  }
+
+  // Layout: 5 equal columns
+  const colW = (pageW - 2 * margin) / 5;
+  const headerH = 8;
+  const rowH = 6.5;
+  const tableTop = margin + 14;
+
+  cols.forEach((col, ci) => {
+    const x = margin + ci * colW;
+    const colProblems = problems.filter(p => p.column === col);
+    const rgb = color ? getColRgb(col) : BW_HEADER_RGB;
+
+    // Column header
+    doc.setFillColor(...rgb);
+    doc.rect(x, tableTop, colW, headerH, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(pdfFont,'bold');
+    doc.setFontSize(11);
+    doc.text(col, x + colW / 2, tableTop + headerH / 2, { align: 'center', baseline: 'middle' });
+
+    // Sub-headers
+    const subTop = tableTop + headerH;
+    doc.setFillColor(240, 240, 240);
+    doc.rect(x, subTop, colW, 5, 'F');
+    doc.setTextColor(80, 80, 80);
+    doc.setFont(pdfFont,'bold');
+    doc.setFontSize(6.5);
+    doc.text('PROBLEM', x + 3, subTop + 3.2);
+    doc.text('ANS', x + colW - 3, subTop + 3.2, { align: 'right' });
+
+    // Rows
+    colProblems.forEach((p, ri) => {
+      const ry = subTop + 5 + ri * rowH;
+      if (ri % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(x, ry, colW, rowH, 'F');
+      }
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.2);
+      doc.line(x, ry + rowH, x + colW, ry + rowH);
+
+      doc.setTextColor(30, 30, 30);
+      doc.setFont(pdfFont,'normal');
+      doc.setFontSize(7);
+      // Checkbox circle
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.3);
+      doc.circle(x + 3, ry + rowH / 2, 1.2);
+      doc.text(String(p.problem), x + 6, ry + rowH / 2, { baseline: 'middle' });
+      doc.setFont(pdfFont,'bold');
+      doc.text(String(p.answer), x + colW - 2, ry + rowH / 2, { align: 'right', baseline: 'middle' });
+    });
+
+    // Border around column
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    const totalH = headerH + 5 + colProblems.length * rowH;
+    doc.rect(x, tableTop, colW, totalH);
+  });
+}
+
+async function generateCardsPDF(cards, opts) {
+  const { style = 'full', color = true, showCardNumbers = true, workType = 'lined', callerSheet = true, lineSpacing = 7, fontKey = 'default' } = opts;
+  const { jsPDF } = jspdf;
+
+  if (style === 'full') {
+    const doc     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
+    const pdfFont = await ensurePdfFont(doc, fontKey);
+    const margin = 12;
+    const pageW  = 215.9;
+    const cardW  = pageW - 2 * margin;  // 191.9
+    const headerH = 14;
+    cards.forEach((card, idx) => {
+      if (idx > 0) doc.addPage();
+      drawBingoCard(doc, { x: margin, y: margin, cardW, card, cardIdx: idx, headerH, showCardNumbers, color, pdfFont });
+    });
+    if (callerSheet) drawCallerSheet(doc, state.problems, color, pdfFont);
+    doc.save('bingo-cards.pdf');
+    return;
+  }
+
+  // Landscape styles share layout math
+  const doc     = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'letter' });
+  const pdfFont = await ensurePdfFont(doc, fontKey);
+  const margin  = 12;
+  const pageW   = 279.4;
+  const pageH   = 215.9;
+  const gap     = 10;
+  const cardW   = (pageW - 2 * margin - gap) / 2;  // ~122.7
+  const headerH = 10;
+  const cellH   = cardW / 5;
+  const cardTotalH = headerH + 5 * cellH + (showCardNumbers ? 8 : 0);
+  const yStart  = margin + (pageH - 2 * margin - cardTotalH) / 2;
+
+  if (style === 'half') {
+    for (let i = 0; i < cards.length; i += 2) {
+      if (i > 0) doc.addPage();
+      drawBingoCard(doc, { x: margin, y: yStart, cardW, card: cards[i], cardIdx: i, headerH, showCardNumbers, color, pdfFont });
+      if (i + 1 < cards.length) {
+        drawBingoCard(doc, { x: margin + cardW + gap, y: yStart, cardW, card: cards[i + 1], cardIdx: i + 1, headerH, showCardNumbers, color, pdfFont });
+      }
+    }
+  } else { // 'work'
+    const workX = margin + cardW + gap;
+    const workH = pageH - 2 * margin;  // fill full page height within margins
+    cards.forEach((card, idx) => {
+      if (idx > 0) doc.addPage();
+      drawBingoCard(doc, { x: margin, y: yStart, cardW, card, cardIdx: idx, headerH, showCardNumbers, color, pdfFont });
+      drawWorkArea(doc, { x: workX, y: margin, w: cardW, h: workH, workType, lineSpacing });
+    });
+  }
+
+  if (callerSheet) drawCallerSheet(doc, state.problems, color, pdfFont);
+  doc.save('bingo-cards.pdf');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+/** Inline SVG icon helper for JS-generated HTML. */
+function icon(name) {
+  return `<svg class="icon" aria-hidden="true"><use href="#icon-${name}"></use></svg>`;
+}
+
+function renderMath(el, text) {
+  if (text && text.includes('\\') && typeof katex !== 'undefined') {
+    try {
+      el.innerHTML = katex.renderToString(text, { throwOnError: false, displayMode: false });
+      return;
+    } catch(e) {}
+  }
+  el.textContent = text;
+}
+
+/* ============================================================
+   OVERLAYS
+   ============================================================ */
+function openOverlay(id) {
+  document.getElementById(id).hidden = false;
+}
+function closeOverlay(id) {
+  document.getElementById(id).hidden = true;
+}
+function closeAllOverlays() {
+  ['settings-overlay','help-overlay','confirm-overlay','csv-help-overlay','check-answers-overlay','roadmap-overlay'].forEach(closeOverlay);
+}
+function anyOverlayOpen() {
+  return ['settings-overlay','help-overlay','confirm-overlay','csv-help-overlay','check-answers-overlay','roadmap-overlay'].some(id => !document.getElementById(id).hidden);
+}
+
+function showConfirm() { openOverlay('confirm-overlay'); }
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+function showNotification(lines, type) {
+  // type: 'success' | 'warning' | 'error'
+  const el = document.getElementById('notification');
+  el.className = type || '';
+  el.innerHTML = `<div style="flex:1">${lines.map(l => `<div>${escHtml(l)}</div>`).join('')}</div>
+    <span class="notif-close" id="notif-close-btn" title="Dismiss" role="button" aria-label="Dismiss">${icon('x')}</span>`;
+  el.hidden = false;
+  document.getElementById('notif-close-btn').onclick = () => { el.hidden = true; };
+}
+
+/* ============================================================
+   BEFOREUNLOAD GUARD
+   ============================================================ */
+function updateBeforeUnload() {
+  if (state.history.length > 0) {
+    window.onbeforeunload = () => 'A game is in progress — are you sure you want to leave?';
+  } else {
+    window.onbeforeunload = null;
+  }
+}
+
+/* ============================================================
+   KEYBOARD SHORTCUTS
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  // Don't intercept when typing in inputs/selects
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+  // Ignore OS keyboard auto-repeat — held keys shouldn't blast through the deck
+  if (e.repeat) return;
+
+  // "?" toggles the help overlay regardless of which overlay is currently open.
+  if (e.key === '?' || e.key === '/') {
+    e.preventDefault();
+    if (anyOverlayOpen()) closeAllOverlays();
+    else openOverlay('help-overlay');
+    return;
+  }
+
+  if (anyOverlayOpen()) {
+    if (e.key === 'Escape') { closeAllOverlays(); e.preventDefault(); }
+    return;
+  }
+
+  switch (e.key) {
+    case ' ':
+    case 'ArrowRight':
+      e.preventDefault();
+      nextProblem(); render();
+      if (state.settings.autoAdvanceOn && !isReplay()) startTimer();
+      else stopTimer();
+      updateBeforeUnload();
+      break;
+    case 'ArrowLeft':
+      e.preventDefault();
+      prevProblem(); stopTimer(); render();
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      if (!e.repeat && currentProblem()) { toggleAnswer(); render(); }
+      break;
+    case 'p': case 'P':
+      e.preventDefault();
+      pauseTimer(); render();
+      break;
+    case 'r': case 'R':
+      e.preventDefault();
+      showConfirm();
+      break;
+    case 's': case 'S':
+      e.preventDefault();
+      renderSettings();
+      openOverlay('settings-overlay');
+      break;
+    case 'b': case 'B':
+      e.preventDefault();
+      state.settings.showBoard = !state.settings.showBoard;
+      saveSettings(); render();
+      break;
+    case 'k': case 'K':
+      e.preventDefault();
+      state.settings.boardMode = state.settings.boardMode === 'grid' ? 'recent' : 'grid';
+      _lastRenderedIndex = -1; // force a fresh static render of the strip
+      saveSettings(); render();
+      break;
+    case 'f': case 'F':
+      e.preventDefault();
+      toggleFullscreen();
+      break;
+    case 'a': case 'A':
+      e.preventDefault();
+      if (state.currentView === 'caller') renderCheckAnswers();
+      break;
+    case 'Escape':
+      // handled above
+      break;
+  }
+});
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+const FS_ENTER_SVG = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 5V1h4M9 1h4v4M1 9v4h4M13 9v4H9"/></svg>`;
+const FS_EXIT_SVG  = `<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 1v4H1M13 5H9V1M5 13V9H1M9 9h4v4"/></svg>`;
+
+function updateFullscreenBtn() {
+  const btn = document.getElementById('btn-fullscreen');
+  if (!btn) return;
+  const inFs = !!document.fullscreenElement;
+  btn.innerHTML = inFs ? FS_EXIT_SVG : FS_ENTER_SVG;
+  btn.setAttribute('aria-label', inFs ? 'Exit fullscreen' : 'Enter fullscreen');
+  btn.title = inFs ? 'Exit fullscreen (F)' : 'Enter fullscreen (F)';
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+document.addEventListener('fullscreenchange', updateFullscreenBtn);
+
+/* ============================================================
+   EVENT WIRING
+   ============================================================ */
+function wireEvents() {
+  document.getElementById('btn-next').onclick = () => {
+    nextProblem(); render();
+    if (state.settings.autoAdvanceOn && !isReplay()) startTimer();
+    else stopTimer();
+    updateBeforeUnload();
+  };
+  document.getElementById('btn-prev').onclick = () => {
+    prevProblem(); stopTimer(); render();
+  };
+  document.getElementById('btn-settings').onclick = () => {
+    renderSettings(); openOverlay('settings-overlay');
+  };
+  document.getElementById('btn-check-answers').onclick = () => renderCheckAnswers();
+  document.getElementById('btn-close-check-answers').onclick = () => closeOverlay('check-answers-overlay');
+
+  // Quick answer checker — column buttons
+  document.getElementById('ca-col-btns').addEventListener('click', e => {
+    const btn = e.target.closest('.ca-col-btn');
+    if (!btn) return;
+    document.querySelectorAll('.ca-col-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    updateCaStatus();
+  });
+
+  // Quick answer checker — live input
+  document.getElementById('ca-answer-input').addEventListener('input', updateCaStatus);
+
+  // Toggle full call sheet
+  document.getElementById('ca-toggle-full-btn').addEventListener('click', () => {
+    const fullSheet = document.getElementById('ca-full-sheet');
+    const toggleBtn = document.getElementById('ca-toggle-full-btn');
+    const isHidden  = fullSheet.hidden;
+    fullSheet.hidden = !isHidden;
+    toggleBtn.classList.toggle('expanded', isHidden);
+    // Lazily update the sheet content when expanding (in case more were called since open)
+    if (isHidden) renderCaFullSheet();
+  });
+  document.getElementById('btn-bingo').addEventListener('click', triggerBingo);
+  document.getElementById('btn-close-settings').onclick = () => closeOverlay('settings-overlay');
+  document.getElementById('btn-help').onclick = () => openOverlay('help-overlay');
+  document.getElementById('btn-close-help').onclick = () => closeOverlay('help-overlay');
+  document.getElementById('confirm-yes').onclick = () => {
+    closeOverlay('confirm-overlay');
+    resetGame(); render(); updateBeforeUnload();
+  };
+  document.getElementById('confirm-no').onclick = () => closeOverlay('confirm-overlay');
+
+  // Click outside panel to close overlay
+  document.querySelectorAll('.overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeOverlay(overlay.id);
+    });
+  });
+
+  document.getElementById('btn-back-home').onclick = () => { stopTimer(); showView('home'); };
+  document.getElementById('btn-close-csv-help').onclick = () => closeOverlay('csv-help-overlay');
+  document.getElementById('btn-close-roadmap').onclick = () => closeOverlay('roadmap-overlay');
+  document.getElementById('btn-fullscreen').onclick = () => toggleFullscreen();
+
+
+  // Print view
+  document.getElementById('pv-back-btn').onclick = () => showView('home');
+  document.getElementById('pv-host-btn').onclick = () => {
+    const MIN_PER_COL = 5;
+    let blockMsg = null;
+
+    // Check for blank problems or answers
+    const blankProb = state.editRows.some(r => r.errors.includes('Problem is empty'));
+    const blankAns  = state.editRows.some(r => r.errors.includes('Answer is required'));
+    if (blankProb && blankAns) {
+      blockMsg = 'Fix blank problems and answers before hosting.';
+    } else if (blankProb) {
+      blockMsg = 'Fix blank problems before hosting.';
+    } else if (blankAns) {
+      blockMsg = 'Fill in all blank answers before hosting.';
+    }
+
+    // Check for duplicate answers in the same column
+    if (!blockMsg) {
+      const hasDuplicate = state.editRows.some(r => r.errors.includes('Duplicate answer in this column'));
+      if (hasDuplicate) blockMsg = 'Fix duplicate answers in the same column before hosting.';
+    }
+
+    // Check per-column minimums (using valid problems only)
+    if (!blockMsg) {
+      const colCounts = { B:0, I:0, N:0, G:0, O:0 };
+      state.problems.forEach(p => { if (p.column in colCounts) colCounts[p.column]++; });
+      const short = BINGO_COLS.filter(c => colCounts[c] < MIN_PER_COL);
+      if (short.length) {
+        const detail = short.map(c => `${c}: ${colCounts[c]}`).join(', ');
+        blockMsg = `Each column needs at least ${MIN_PER_COL} problems. (${detail})`;
+      }
+    }
+
+    if (blockMsg) {
+      const errEl = document.getElementById('pv-host-error');
+      errEl.textContent = blockMsg;
+      errEl.classList.add('visible');
+      clearTimeout(errEl._hideTimer);
+      errEl._hideTimer = setTimeout(() => errEl.classList.remove('visible'), 4000);
+      return;
+    }
+
+    resetGame(); showView('caller'); computeProblemFontSize(); render();
+  };
+  document.getElementById('pv-download-btn').onclick = () => pvDownloadCards();
+  document.getElementById('pv-save-csv-btn').onclick = () => pvSaveSetCsv();
+
+  // Style card picker
+  document.getElementById('pv-style-picker').addEventListener('click', e => {
+    const card = e.target.closest('.pv-style-card');
+    if (!card) return;
+    document.querySelectorAll('.pv-style-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+  });
+
+  // Color/BW toggle
+  document.getElementById('pv-options').addEventListener('click', e => {
+    const btn = e.target.closest('[data-pv-color]');
+    if (!btn) return;
+    document.querySelectorAll('[data-pv-color]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+
+  // Font picker
+  const fontSel = document.getElementById('pv-font-select');
+  populateFontSelect(fontSel);
+  fontSel.addEventListener('change', e => setFont(e.target.value));
+
+  // Work area style picker
+  document.getElementById('pv-work-picker').addEventListener('click', e => {
+    const btn = e.target.closest('[data-pv-work]');
+    if (!btn) return;
+    document.querySelectorAll('[data-pv-work]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const isBlank = btn.dataset.pvWork === 'blank';
+    document.getElementById('pv-work-scale-row').style.display = isBlank ? 'none' : '';
+    updateWorkPreview();
+    updateWorkThumb();
+  });
+
+  document.getElementById('pv-work-scale').addEventListener('input', () => {
+    const v = parseFloat(document.getElementById('pv-work-scale').value);
+    document.getElementById('pv-work-scale-val').textContent = v % 1 === 0 ? v + ' mm' : v.toFixed(1) + ' mm';
+    document.getElementById('pv-work-scale-reset').hidden = (v === 7);
+    updateWorkPreview();
+  });
+
+  document.getElementById('pv-work-scale-reset').addEventListener('click', () => {
+    const slider = document.getElementById('pv-work-scale');
+    slider.value = 7;
+    document.getElementById('pv-work-scale-val').textContent = '7 mm';
+    document.getElementById('pv-work-scale-reset').hidden = true;
+    updateWorkPreview();
+  });
+
+  // Initially hide the line-spacing reset (default is 7 mm)
+  document.getElementById('pv-work-scale-reset').hidden = true;
+  updateWorkPreview();
+
+  // Column color pickers
+  document.getElementById('pv-color-pickers').addEventListener('input', e => {
+    const input = e.target.closest('.pv-color-input');
+    if (!input) return;
+    const col = input.closest('.pv-color-row').dataset.col;
+    state.settings.cardColors[col] = input.value;
+    applyCardColors();
+    saveSettings();
+  });
+
+  document.getElementById('pv-color-pickers').addEventListener('click', e => {
+    const btn = e.target.closest('.pv-color-reset');
+    if (!btn) return;
+    const col = btn.closest('.pv-color-row').dataset.col;
+    state.settings.cardColors[col] = DEFAULT_COL_COLORS[col];
+    applyCardColors();
+    saveSettings();
+  });
+
+  document.getElementById('file-input').onchange = e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const name = file.name.replace(/\.csv$/i, '').replace(/[-_]/g, ' ');
+      const { problems, errors, allRows } = loadProblems(ev.target.result, file.name);
+      applyLoadedSet(problems, name, allRows);
+      showView('print');
+      renderPrintView();
+      // Show fatal errors only — row-level errors are shown inline in the editable table
+      const errEl = document.getElementById('pv-load-error');
+      if (errEl) {
+        if (errors.length) { errEl.textContent = errors.join('\n'); errEl.hidden = false; }
+        else { errEl.hidden = true; }
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  window.addEventListener('resize', () => {
+    clearTimeout(_resizeDebounceTimer);
+    _resizeDebounceTimer = setTimeout(computeProblemFontSize, 150);
+  });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  wireEvents();
+  applyCardColors();
+  applyFont();
+  audio.init();
+  renderHomepage();
+  showView('home');
+}
+
+init();
+</script>
+</body>
+</html>

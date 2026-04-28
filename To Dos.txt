@@ -1,0 +1,20 @@
+I've added four sounds to the a folder named sounds, use them to replace all the synthesized sounds. One is to replace the ticking sounds, the rest correspond to the animation options (if there's no animation, there's no need for a sound effect). If possible, sync the animations to the duration of the sound effect. I'll probably need to fine tune the timing manually, so just give it a base line of polish.
+
+I've added an mp3 to C:\Users\benja\OneDrive\Documents\Coding Projects\Math Bingo\sounds\Bingo, but it doesn't fire when I hit the Bingo Button
+
+We need to adjust the relative text size between the bingo balls and the equations. They should always be the same. The font size should be the same, in both the currently called number and the previously called number balls. We may have to recalculate the spacing of things or even the number of recent balls we're able to show.
+
+Remove the ability to add a problem file in the settings menu
+
+Instead of having the toggle between Color and Black & White  under its own COLOR heading, put it beneath the card colors heading (above the color pickers)
+
+If the Card Colors or Line spacing are still at their default values, hide the reset button
+
+Let's adjust how the Work Area Bingo Card PDFs look. The actual work area should take up as much vertical space as possible (accounting for print margins). Also, the grid paper needs to have a border.
+
+In the chips that show how many of each question you have, The letter show be bolded and the number shouldn't 
+
+In the Col Dropdowns where you select the letter for your problem, there's some bugginess with the font color
+
+For the card style icons, we need to adjust a few things. First, the full page icon needs to show a vertical piece of paper. Second, the Work Area icon isn't accurate. The work area is on the right side of  the card. It should be basically the same icon as the Half-Page, but the right card is replaced with our dynamically changing Work Area.
+------------------------------------------------------------------------------
