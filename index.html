@@ -2106,6 +2106,19 @@ const TOPIC_GROUPS = [
 function topicIsPlayable(group) {
   return group.variants.some(v => v.path);
 }
+// Return the deduped list of CCSS standards a group covers across the allowed
+// grades. Each grades[gk] may be a string OR a string[]; both shapes are
+// supported so a single grade can map to multiple standards without churn.
+function topicAllStandards(group, allowed = GRADE_ORDER) {
+  const set = new Set();
+  for (const gk of allowed) {
+    const v = group.grades[gk];
+    if (v == null) continue;
+    (Array.isArray(v) ? v : [v]).forEach(s => { if (s) set.add(s); });
+  }
+  return [...set];
+}
+
 function topicPrimaryGrade(group, allowed = GRADE_ORDER) {
   // Pick the single best grade for this group within the allowed set:
   // 1. fluency grade if it's in allowed
@@ -2755,7 +2768,7 @@ function _topicMatchesQuery(group, q) {
   q = q.toLowerCase();
   if (group.short.toLowerCase().includes(q)) return true;
   if (group.long.toLowerCase().includes(q)) return true;
-  if (Object.values(group.grades).some(s => (s||'').toLowerCase().includes(q))) return true;
+  if (topicAllStandards(group).some(s => s.toLowerCase().includes(q))) return true;
   if (Object.keys(group.grades).some(gk => (GRADE_LABELS[gk]||'').toLowerCase().includes(q))) return true;
   if (group.variants.some(v => v.label.toLowerCase().includes(q))) return true;
   return false;
@@ -2845,9 +2858,13 @@ function renderAvailableSets() {
   };
 }
 
-// Render a single topic card for a given group + grade context
+// Render a single topic card for a given group + grade context.
+// Standards shown:
+//   - specific grade selected → only that grade's standards
+//   - "All" or band view → deduped union of standards across all active grades
 function _renderTopicCard(group, gk) {
-  const std = group.grades[gk] || '';
+  const stdGrades = _hpFilter.grade ? [gk] : _activeGrades();
+  const stdText = topicAllStandards(group, stdGrades).join(' · ');
   const isFluency = !!(group.fluency && group.fluency[gk]);
   const tags = (isFluency ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
              + (group.calc ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
@@ -2871,7 +2888,7 @@ function _renderTopicCard(group, gk) {
       ${chevron}
     </div>
     <div class="hp-set-long">${escHtml(group.long)}</div>
-    ${std ? `<div class="hp-set-std">${escHtml(std)}</div>` : ''}
+    ${stdText ? `<div class="hp-set-std">${escHtml(stdText)}</div>` : ''}
     ${variantList}
   </div>`;
 }
@@ -2891,7 +2908,7 @@ function renderRoadmapOverlay() {
 
   body.innerHTML = GRADE_ORDER.filter(gk => byGrade[gk]).map(gk => {
     const rows = byGrade[gk].map(group => {
-      const std = group.grades[gk] || '';
+      const std = topicAllStandards(group, [gk]).join(' · ');
       const isFluency = !!(group.fluency && group.fluency[gk]);
       const tags = (isFluency ? '<span class="hp-tag tag-fluency" title="Fluency standard">★</span>' : '')
                  + (group.calc ? '<span class="hp-tag tag-calc" title="Calculator recommended">[calc]</span>' : '');
