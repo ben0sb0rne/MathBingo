@@ -1820,11 +1820,11 @@ const GRADE_CHIP_LABELS = {
   'Algebra II': 'Alg II', 'Pre-Calculus': 'Pre-C', 'Calculus': 'Calc', 'Statistics': 'Stats',
 };
 // Bands group grades for the friendlier filter row.
+// Pre-Algebra is treated as middle-school; Statistics is treated as high-school.
 const GRADE_BANDS = [
   { id: 'elem', label: 'Elementary K–5', short: 'K–5',  grades: ['K','1','2','3','4','5'] },
-  { id: 'mid',  label: 'Middle 6–8',     short: '6–8',  grades: ['6','7','8'] },
-  { id: 'hs',   label: 'High School',    short: 'HS',   grades: ['Pre-Algebra','Algebra I','Geometry','Algebra II','Pre-Calculus','Calculus'] },
-  { id: 'stat', label: 'Stats',          short: 'Stats',grades: ['Statistics'] },
+  { id: 'mid',  label: 'Middle School',  short: 'Mid', grades: ['6','7','8','Pre-Algebra'] },
+  { id: 'hs',   label: 'High School',    short: 'HS',   grades: ['Algebra I','Geometry','Algebra II','Pre-Calculus','Calculus','Statistics'] },
 ];
 const TOPIC_GROUPS = [
   // Kindergarten
@@ -2106,14 +2106,20 @@ const TOPIC_GROUPS = [
 function topicIsPlayable(group) {
   return group.variants.some(v => v.path);
 }
-function topicPrimaryGrade(group) {
-  // Prefer fluency grade if any; else first grade in GRADE_ORDER that this group spans.
+function topicPrimaryGrade(group, allowed = GRADE_ORDER) {
+  // Pick the single best grade for this group within the allowed set:
+  // 1. fluency grade if it's in allowed
+  // 2. earliest grade (per GRADE_ORDER) that's in both group.grades and allowed
   const grades = Object.keys(group.grades);
   if (group.fluency) {
-    for (const gk of grades) if (group.fluency[gk]) return gk;
+    for (const gk of GRADE_ORDER) {
+      if (allowed.includes(gk) && grades.includes(gk) && group.fluency[gk]) return gk;
+    }
   }
-  for (const gk of GRADE_ORDER) if (grades.includes(gk)) return gk;
-  return grades[0];
+  for (const gk of GRADE_ORDER) {
+    if (allowed.includes(gk) && grades.includes(gk)) return gk;
+  }
+  return null;
 }
 
 /* ============================================================
@@ -2755,27 +2761,35 @@ function _topicMatchesQuery(group, q) {
   return false;
 }
 
-// Render filtered playable topic groups, expanded into per-grade sections
+// Render filtered playable topic groups. Each group appears AT MOST ONCE,
+// bucketed under its "primary" grade for the active filter (fluency grade
+// preferred, else earliest grade in the active range).
 function renderAvailableSets() {
   const listEl = document.getElementById('hp-sets-list');
   if (!listEl) return;
 
   const activeGrades = _activeGrades();
   const q = _hpFilter.query.trim();
+  const specificGrade = _hpFilter.grade;  // when set, force bucket to this grade
 
-  // For each active grade, list the topic groups that:
-  //   1. have an entry for that grade,
-  //   2. are playable (have ≥1 variant with path),
-  //   3. match the search query.
-  const sections = [];
-  activeGrades.forEach(gk => {
-    const groups = TOPIC_GROUPS.filter(g =>
-      g.grades[gk] !== undefined &&
-      topicIsPlayable(g) &&
-      _topicMatchesQuery(g, q)
-    );
-    if (groups.length) sections.push({ gk, groups });
+  // 1. Pick playable groups that have at least one entry in the active range
+  //    and match the search query.
+  const playable = TOPIC_GROUPS.filter(g =>
+    topicIsPlayable(g) &&
+    _topicMatchesQuery(g, q) &&
+    Object.keys(g.grades).some(gk => activeGrades.includes(gk))
+  );
+
+  // 2. Bucket each group into exactly one grade.
+  const byGrade = {};
+  playable.forEach(g => {
+    const bucket = specificGrade
+      ? (g.grades[specificGrade] !== undefined ? specificGrade : null)
+      : topicPrimaryGrade(g, activeGrades);
+    if (bucket) (byGrade[bucket] = byGrade[bucket] || []).push(g);
   });
+
+  const sections = GRADE_ORDER.filter(gk => byGrade[gk]).map(gk => ({ gk, groups: byGrade[gk] }));
 
   if (sections.length === 0) {
     const filterDesc = _hpFilter.grade
